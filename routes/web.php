@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\StaffController;
+use App\Http\Controllers\Dashboard\StudentController;
 use App\Http\Middleware\AccountActiveMiddleware;
 use Illuminate\Support\Facades\Route;
 
@@ -37,5 +38,17 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::post('/add', [DepartmentController::class, 'addPost'])->name('department.addPost');
         Route::post('/{uuid}/edit', [DepartmentController::class, 'editPost'])->name('department.editPost');
         Route::post('/delete', [DepartmentController::class, 'delete'])->name('department.deletePost');
+    });
+
+    // Students
+    Route::prefix('/student')->group(function () {
+        Route::get('/', [StudentController::class, 'index'])->name('student');
+        Route::get('/department/{uuid}/{set}', [StudentController::class, 'department'])->name('student.department');
+        Route::get('/department/{uuid}/{set}/add', [StudentController::class, 'add'])->name('student.add');
+        Route::get('/{uuid}/edit', [StudentController::class, 'edit'])->name('student.edit');
+
+        Route::post('/add', [StudentController::class, 'addPost'])->name('student.addPost');
+        Route::post('/edit', [StudentController::class, 'editPost'])->name('student.editPost');
+        Route::post('/delete', [StudentController::class, 'delete'])->name('student.deletePost');
     });
 });
