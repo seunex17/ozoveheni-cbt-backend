@@ -10,13 +10,17 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "fruitcake/laravel-debugbar": "^4.0",
+        "larastan/larastan": "^3.0",
+        "laravel/boost": "^2.0",
         "laravel/pail": "^1.2.2",
-        "laravel/pint": "^1.24",
+        "laravel/pint": "^1.27",
         "laravel/sail": "^1.41",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
@@ -69,6 +73,14 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ],
+        "analyse": [
+            "phpstan analyse --memory-limit=2G"
+        ],
+        "pint": "pint",
+        "check": [
+            "@pint",
+            "@analyse"
         ]
     },
     "extra": {
