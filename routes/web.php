@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Dashboard\CourseController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
+use App\Http\Controllers\Dashboard\ExamController;
 use App\Http\Controllers\Dashboard\StaffController;
 use App\Http\Controllers\Dashboard\StudentController;
 use App\Http\Middleware\AccountActiveMiddleware;
@@ -62,5 +63,22 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::post('/add', [CourseController::class, 'addPost'])->name('course.addPost');
         Route::post('/{uuid}/edit', [CourseController::class, 'editPost'])->name('course.editPost');
         Route::post('/delete', [CourseController::class, 'delete'])->name('course.deletePost');
+    });
+
+    // Exams
+    Route::prefix('/exam')->group(function () {
+        Route::get('/', [ExamController::class, 'index'])->name('exam');
+        Route::get('/add', [ExamController::class, 'add'])->name('exam.add');
+        Route::get('/{uuid}/edit', [ExamController::class, 'edit'])->name('exam.edit');
+        Route::get('{uuid}/view', [ExamController::class, 'view'])->name('exam.view');
+        Route::get('/{uuid}/set-new-exam', [ExamController::class, 'setNewExam'])->name('exam.setNewExam');
+        Route::get('/{uuid}/single-exam', [ExamController::class, 'singleExam'])->name('exam.singleExam');
+        Route::get('/{uuid}/add-question', [ExamController::class, 'addQuestion'])->name('exam.addQuestion');
+        Route::get('/{id}/view-question', [ExamController::class, 'viewQuestion'])->name('exam.viewQuestion');
+
+        Route::post('/add', [ExamController::class, 'addPost'])->name('exam.addPost');
+        Route::post('/edit', [ExamController::class, 'editPost'])->name('exam.editPost');
+        Route::post('/set-new-exam', [ExamController::class, 'setNewExamPost'])->name('exam.setNewExam');
+        Route::post('/add-question', [ExamController::class, 'addQuestionPost'])->name('exam.addQuestionPost');
     });
 });
