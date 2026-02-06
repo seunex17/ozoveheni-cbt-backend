@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Dashboard\CourseController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\StaffController;
@@ -50,5 +51,16 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::post('/add', [StudentController::class, 'addPost'])->name('student.addPost');
         Route::post('/edit', [StudentController::class, 'editPost'])->name('student.editPost');
         Route::post('/delete', [StudentController::class, 'delete'])->name('student.deletePost');
+    });
+
+    // Course
+    Route::prefix('/course')->group(function () {
+        Route::get('/', [CourseController::class, 'index'])->name('course');
+        Route::get('/add', [CourseController::class, 'add'])->name('course.add');
+        Route::get('/{uuid}/edit', [CourseController::class, 'edit'])->name('course.edit');
+
+        Route::post('/add', [CourseController::class, 'addPost'])->name('course.addPost');
+        Route::post('/{uuid}/edit', [CourseController::class, 'editPost'])->name('course.editPost');
+        Route::post('/delete', [CourseController::class, 'delete'])->name('course.deletePost');
     });
 });

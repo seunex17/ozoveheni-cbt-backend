@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Link, page } from "@inertiajs/svelte";
-    import { Folder, GraduationCap, Home, Users } from "lucide-svelte";
+    import { BookA, Folder, GraduationCap, Home, Users } from "lucide-svelte";
 
     const segments = $derived($page.url.split("/").filter(Boolean));
 
@@ -28,6 +28,12 @@
             route: "/dashboard/student",
             icon: GraduationCap,
             active: $page.url.startsWith("/dashboard/student"),
+        },
+        {
+            name: "Courses",
+            route: "/dashboard/course",
+            icon: BookA,
+            active: $page.url.startsWith("/dashboard/course"),
         },
     ]);
 </script>
