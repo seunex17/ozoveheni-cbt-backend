@@ -80,6 +80,15 @@
             </div>
         </div>
     </div>
+
+    {#snippet actions()}
+        <Link
+            href="/dashboard/department/add"
+            class="btn btn-primary btn-sm btn-outline"
+        >
+            <Plus size="16" /> Add New</Link
+        >
+    {/snippet}
 </DashboardLayout>
 
 <dialog bind:this={deleteModal} class="modal">

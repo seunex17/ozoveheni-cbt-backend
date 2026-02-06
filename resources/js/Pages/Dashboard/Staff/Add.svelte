@@ -4,7 +4,7 @@
     import { Save } from "lucide-svelte";
 </script>
 
-<DashboardLayout title="Add New Staff">
+<DashboardLayout title="Add New Staff" goBack={true}>
     <div class="flex items-center justify-center w-full">
         <div class="shadow-sm card w-96 bg-base-100">
             <div class="card-body">

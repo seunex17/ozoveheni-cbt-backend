@@ -23,7 +23,7 @@
                     {#if goBack}
                         <button
                             onclick={() => window.history.back()}
-                            class="btn btn-square"
+                            class="btn btn-square btn-sm"
                         >
                             <ChevronLeft size="20" />
                         </button>

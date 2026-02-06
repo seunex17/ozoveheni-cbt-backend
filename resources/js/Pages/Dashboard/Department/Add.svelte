@@ -6,7 +6,7 @@
     //
 </script>
 
-<DashboardLayout title="Add New Department">
+<DashboardLayout title="Add New Department" goBack={true}>
     <div class="flex items-center justify-center w-full">
         <div class="shadow-sm card w-96 bg-base-100">
             <div class="card-body">

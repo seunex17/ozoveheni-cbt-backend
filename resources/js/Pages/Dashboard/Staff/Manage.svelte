@@ -80,7 +80,7 @@
             href="/dashboard/staff/add"
             class="btn btn-primary btn-sm btn-outline"
         >
-            <Plus size="16" /> Add New"></Link
+            <Plus size="16" /> Add New</Link
         >
     {/snippet}
 </DashboardLayout>

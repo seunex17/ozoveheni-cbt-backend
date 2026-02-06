@@ -6,7 +6,7 @@
     let { department } = $props();
 </script>
 
-<DashboardLayout title="Update Department">
+<DashboardLayout title="Update Department" goBack={true}>
     <div class="flex items-center justify-center w-full">
         <div class="shadow-sm card w-96 bg-base-100">
             <div class="card-body">
