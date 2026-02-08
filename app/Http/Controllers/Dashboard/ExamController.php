@@ -224,7 +224,6 @@ class ExamController extends Controller
             ->with('success', 'Question created successfully.');
     }
 
-
     public function viewQuestion(string $id)
     {
         $question = Question::with('options')->findOrFail($id);
@@ -232,5 +231,13 @@ class ExamController extends Controller
         return Inertia::render('Dashboard/Exams/Single/ViewQuestion', [
             'question' => $question,
         ]);
+    }
+
+    public function deleteQuestionPost()
+    {
+        Question::destroy(request()->input('id'));
+
+        return back()
+            ->with('success', 'Question deleted successfully.');
     }
 }

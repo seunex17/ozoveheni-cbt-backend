@@ -28,4 +28,12 @@ class Exam extends Model
     {
         return $this->hasMany(SingleExam::class);
     }
+
+    protected function casts(): array
+    {
+        return [
+            'start_date' => 'date',
+            'end_date' => 'date',
+        ];
+    }
 }

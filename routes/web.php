@@ -80,5 +80,6 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::post('/edit', [ExamController::class, 'editPost'])->name('exam.editPost');
         Route::post('/set-new-exam', [ExamController::class, 'setNewExamPost'])->name('exam.setNewExam');
         Route::post('/add-question', [ExamController::class, 'addQuestionPost'])->name('exam.addQuestionPost');
+        Route::post('/delete-question', [ExamController::class, 'deleteQuestionPost'])->name('exam.deleteQuestionPost');
     });
 });
