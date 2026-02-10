@@ -33,8 +33,9 @@ class StudentController extends Controller
         ]);
     }
 
-    public function department(string $uuid, string $set)
+    public function department(string $uuid, string $set, string $level)
     {
+        $set = Str::replace('-', '/', $set);
         $department = Department::where('uuid', $uuid)->firstOrFail();
         $students = Student::where('department_id', $department->id)
             ->where('set', $set)
@@ -44,16 +45,19 @@ class StudentController extends Controller
         return Inertia::render('Student/Department', [
             'department' => $department,
             'students' => Inertia::scroll(fn () => $students),
+            'level' => $level,
         ]);
     }
 
-    public function add(string $uuid, string $set)
+    public function add(string $uuid, string $set, $level)
     {
         $department = Department::where('uuid', $uuid)->firstOrFail();
+        $set = Str::replace('-', '/', $set);
 
         return Inertia::render('Student/Add', [
             'department' => $department,
             'set' => $set,
+            'level' => $level,
         ]);
     }
 

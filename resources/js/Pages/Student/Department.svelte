@@ -4,7 +4,7 @@
     import { Pen, Plus, Trash } from "lucide-svelte";
     import Time from "svelte-time";
 
-    let { students, department } = $props();
+    let { students, department, level } = $props();
 
     let deleteModal: HTMLDialogElement;
     let deptId;
@@ -32,7 +32,10 @@
     };
 </script>
 
-<DashboardLayout title="{department.name} Students" goBack={true}>
+<DashboardLayout
+    title="{department.name} Students ({`${level.toUpperCase()}`})"
+    goBack={true}
+>
     <div class="w-full p-4 card bg-base-100">
         <div class="card-body">
             <div class="overflow-x-auto">

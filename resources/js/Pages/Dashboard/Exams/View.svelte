@@ -1,7 +1,7 @@
 <script lang="ts">
     import { InfiniteScroll, Link } from "@inertiajs/svelte";
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
-    import { Plus, Trash, View } from "lucide-svelte";
+    import { ChessKingIcon, Plus, Sheet, Trash, View } from "lucide-svelte";
     import Time from "svelte-time";
 
     let { exam, singleExams } = $props();
@@ -75,11 +75,25 @@
     </div>
 
     {#snippet actions()}
-        <Link
-            href="/dashboard/exam/{exam.uuid}/set-new-exam"
-            class="btn btn-primary btn-sm btn-outline"
-        >
-            <Plus size="16" /> Set New Exam</Link
-        >
+        <div class="flex gap-4">
+            <Link
+                href="/dashboard/exam/{exam.uuid}/reports"
+                class="btn btn-secondary btn-sm btn-outline"
+            >
+                <ChessKingIcon size="16" /> Reports</Link
+            >
+            <Link
+                href="/dashboard/exam/{exam.uuid}/set-new-exam"
+                class="btn btn-primary btn-sm btn-outline"
+            >
+                <Plus size="16" /> Set New Exam</Link
+            >
+            <Link
+                href="/dashboard/exam/{exam.uuid}/broadsheet"
+                class="btn btn-info btn-sm btn-outline"
+            >
+                <Sheet size="16" /> Broadsheet</Link
+            >
+        </div>
     {/snippet}
 </DashboardLayout>

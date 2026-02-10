@@ -1,3 +1,4 @@
+import "./bootstrap";
 import { createInertiaApp } from "@inertiajs/svelte";
 import { mount } from "svelte";
 import MainLayout from "./MainLayout.svelte";

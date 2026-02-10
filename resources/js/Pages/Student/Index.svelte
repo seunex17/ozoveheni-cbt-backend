@@ -5,6 +5,7 @@
     let { departments } = $props();
 
     let uuid: string = $state("");
+    let level: string = $state("");
     let selectedSet: string = $state("");
 
     const startYear = 2024;
@@ -15,7 +16,9 @@
     ).reverse();
 
     const submit = () => {
-        router.visit(`/dashboard/student/department/${uuid}/${selectedSet}`);
+        router.visit(
+            `/dashboard/student/department/${uuid}/${selectedSet.replace("/", "-")}/${level}`,
+        );
     };
 </script>
 
@@ -36,20 +39,36 @@
                         </select>
                     </fieldset>
                     <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Set</legend>
+                        <legend class="fieldset-legend">Level</legend>
+                        <select class="select" bind:value={level}>
+                            <option value="" disabled selected
+                                >Pick a level</option
+                            >
+                            <option value="nd1">ND1</option>
+                            <option value="nd2">ND2</option>
+                            <option value="hnd1">HND1</option>
+                            <option value="hnd2">HND2</option>
+                        </select>
+                    </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Session</legend>
                         <select class="select" bind:value={selectedSet}>
                             <option value="" disabled selected
-                                >Pick a set</option
+                                >Pick a session</option
                             >
                             {#each years as year}
-                                <option value={year}>{year}</option>
+                                <option value={`${year}/${year + 1}`}
+                                    >{`${year}/${year + 1}`}</option
+                                >
                             {/each}
                         </select>
                     </fieldset>
                     <button
                         onclick={submit}
                         class="btn btn-block btn-primary"
-                        disabled={selectedSet === "" || uuid === ""}
+                        disabled={selectedSet === "" ||
+                            uuid === "" ||
+                            level === ""}
                     >
                         Submit</button
                     >

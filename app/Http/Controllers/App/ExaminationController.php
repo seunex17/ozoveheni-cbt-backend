@@ -13,16 +13,20 @@
 
 namespace App\Http\Controllers\App;
 
+use App\Events\ExamHallEvent;
 use App\Http\Controllers\Controller;
 use App\Models\Answer;
 use App\Models\Attempt;
 use App\Models\Exam;
+use App\Models\ExamHall;
 use App\Models\Question;
 use App\Models\QuestionOption;
+use App\Models\Report;
 use App\Models\SingleExam;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as ResponseAlias;
 
 class ExaminationController extends Controller
@@ -35,6 +39,7 @@ class ExaminationController extends Controller
     public function loadQuestions(string $department, string $set, string $attempt)
     {
         $today = now()->toDateString();
+        $set = Str::replace('-', '/', $set);
 
         $exam = Exam::where([
             'department_id' => $department,
@@ -132,13 +137,19 @@ class ExaminationController extends Controller
             'single_exam_id' => $singleExam->id,
         ]);
 
+        ExamHall::create([
+            'student_id' => $student->id,
+            'attempt_id' => $attempt->id,
+        ]);
+
+        broadcast(new ExamHallEvent(ExamHall::count()))->toOthers();
+
         return response()->json([
             'type' => 'start',
             'student' => $student,
             'attempt_id' => $attempt->id,
         ]);
     }
-
 
     /**
      * @throws \Throwable
@@ -161,6 +172,25 @@ class ExaminationController extends Controller
                         'is_correct' => $isCorrect,
                     ]
                 );
+
+                $attempt = Attempt::find($request->input('attempt_id'));
+
+                $question = Question::find($questionId)
+                    ->with('singleExam')
+                    ->first();
+
+                $result = Report::updateOrCreate(
+                    [
+                        'student_id' => $attempt->student_id,
+                        'exam_id' => $question->singleExam->exam_id,
+                        'course_id' => $question->singleExam->course_id,
+                    ],
+                );
+
+                if ($isCorrect) {
+                    $result->exam = $result->exam + $question->marks;
+                    $result->save();
+                }
             }
         });
 

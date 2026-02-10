@@ -18,7 +18,9 @@ use App\Models\Course;
 use App\Models\Department;
 use App\Models\Exam;
 use App\Models\Question;
+use App\Models\Report;
 use App\Models\SingleExam;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
@@ -55,6 +57,7 @@ class ExamController extends Controller
             'set' => 'required',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
+            'level' => 'required',
         ]);
 
         if ($validate->fails()) {
@@ -115,6 +118,19 @@ class ExamController extends Controller
             ->paginate();
 
         return Inertia::render('Dashboard/Exams/View', [
+            'exam' => $exam,
+            'singleExams' => Inertia::scroll(fn () => $singleExam),
+        ]);
+    }
+
+    public function broadsheet(string $uuid)
+    {
+        $exam = Exam::where('uuid', $uuid)->firstOrFail();
+        $singleExam = SingleExam::where('exam_id', $exam->id)
+            ->with('course')
+            ->paginate();
+
+        return Inertia::render('Dashboard/Exams/BroadSheet', [
             'exam' => $exam,
             'singleExams' => Inertia::scroll(fn () => $singleExam),
         ]);
@@ -239,5 +255,80 @@ class ExamController extends Controller
 
         return back()
             ->with('success', 'Question deleted successfully.');
+    }
+
+    public function deleteExamPost()
+    {
+        Exam::destroy(request()->input('id'));
+
+        return back()
+            ->with('success', 'Exam deleted successfully.');
+    }
+
+    public function reports(Request $request, string $uuid)
+    {
+        $exam = Exam::where('uuid', $uuid)->firstOrFail();
+        $courses = Course::orderBy('name')->get();
+        $courseUUid = $request->get('course_uuid') ?? null;
+
+        if ($courseUUid) {
+            $course = Course::where('uuid', $courseUUid)->firstOrFail();
+            $reports = Report::where([
+                'exam_id' => $exam->id,
+                'course_id' => $course->id,
+            ])
+                ->with('student')
+                ->get()->map(function ($report) {
+                    return [
+                        'name' => $report->student->first_name.' '.$report->student->last_name,
+                        'reg_no' => $report->student->reg_no,
+                        'first_ca' => $report->first_ca,
+                        'second_ca' => $report->second_ca,
+                        'total' => $report->total_ca,
+                        'exam' => $report->exam,
+                        'id' => $report->id,
+                    ];
+                });
+        }
+
+        return Inertia::render('Dashboard/Exams/Report', [
+            'exam' => $exam,
+            'courseUUid' => $courseUUid,
+            'courses' => $courses,
+            'course' => $course ?? null,
+            'reports' => $reports ?? null,
+        ]);
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function refreshReports(Request $request)
+    {
+        $exam = Exam::findOrFail($request->input('exam_id'));
+
+        \DB::transaction(function () use ($request, $exam) {
+            $students = Student::where([
+                'set' => $exam->set,
+                'department_id' => $exam->department_id,
+            ])->get();
+
+            foreach ($students as $student) {
+                Report::updateOrCreate([
+                    'exam_id' => $request->input('exam_id'),
+                    'course_id' => $request->input('course_id'),
+                    'student_id' => $student->id,
+                ]);
+            }
+        });
+
+        return back()
+            ->with('success', 'Report updated successfully.');
+    }
+
+    public function updateReport(Request $request)
+    {
+        Report::find($request->input('id'))
+            ->update($request->input());
     }
 }

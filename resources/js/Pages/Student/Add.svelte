@@ -3,7 +3,7 @@
     import DashboardLayout from "../../Components/Layouts/DashboardLayout.svelte";
     import { Form } from "@inertiajs/svelte";
 
-    let { set, department } = $props();
+    let { set, department, level } = $props();
 
     let preview = $state("");
 
@@ -167,6 +167,7 @@
                     value={department.id}
                 />
                 <input type="hidden" name="set" value={set} />>
+                <input type="hidden" name="level" value={level} />
             </div>
         </div>
     </Form>

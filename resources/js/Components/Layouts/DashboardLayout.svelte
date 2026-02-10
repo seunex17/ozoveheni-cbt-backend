@@ -11,15 +11,15 @@
     } = $props();
 </script>
 
-<main class="flex flex-col w-screen h-screen bg-base-200">
+<main class="flex flex-col w-full h-screen bg-base-200">
     <MainHeader />
-    <div class="flex w-full gap-6 grow">
+    <div class="flex w-full gap-6 grow overflow-hidden">
         <SideBar />
-        <div class="flex flex-col gap-2 mt-3 grow">
+        <div class="flex flex-col w-full gap-2 mt-3 grow">
             <div
                 class="flex items-center justify-between w-full mb-3.5 px-4 py-2"
             >
-                <div class="flex items-center gap-2">
+                <div class="flex items-center grow gap-2">
                     {#if goBack}
                         <button
                             onclick={() => window.history.back()}
@@ -30,11 +30,13 @@
                     {/if}
                     <h4 class="text-xl font-semibold capitalize">{title}</h4>
                 </div>
-                <div>
+                <div class="">
                     {@render actions?.()}
                 </div>
             </div>
-            {@render children()}
+            <div class="grow overflow-y-auto">
+                {@render children()}
+            </div>
         </div>
     </div>
 </main>

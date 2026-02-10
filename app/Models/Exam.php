@@ -17,6 +17,7 @@ class Exam extends Model
         'start_date',
         'end_date',
         'status',
+        'level',
     ];
 
     public function department(): BelongsTo
@@ -27,6 +28,11 @@ class Exam extends Model
     public function singleExams(): HasMany
     {
         return $this->hasMany(SingleExam::class);
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
     }
 
     protected function casts(): array

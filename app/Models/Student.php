@@ -19,6 +19,7 @@ class Student extends Model
         'gender',
         'dob',
         'photo',
+        'level',
     ];
 
     public function department(): BelongsTo
@@ -29,5 +30,10 @@ class Student extends Model
     public function attempts(): HasMany
     {
         return $this->hasMany(Attempt::class);
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
     }
 }

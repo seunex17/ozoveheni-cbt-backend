@@ -7,17 +7,21 @@ use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\ExamController;
 use App\Http\Controllers\Dashboard\StaffController;
 use App\Http\Controllers\Dashboard\StudentController;
+use App\Http\Controllers\ReportController;
 use App\Http\Middleware\AccountActiveMiddleware;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [Authcontroller::class, 'index'])->name('home');
 Route::get('/login', fn () => redirect()->route('home'));
+Route::get('/reports/{uuid}', [ReportController::class, 'index'])->name('reports');
 
 Route::post('/login', [Authcontroller::class, 'login'])->name('login');
 Route::post('/logout', [Authcontroller::class, 'logout'])->name('logout');
 
 Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::class])->group(function () {
     Route::get('/', [Dashboardcontroller::class, 'index'])->name('dashboard');
+
+    Route::post('/sweep-exam-hall', [Dashboardcontroller::class, 'sweepExamHall'])->name('sweepExamHall');
 
     // * Staffs
     Route::prefix('/staff')->group(function () {
@@ -45,8 +49,8 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     // Students
     Route::prefix('/student')->group(function () {
         Route::get('/', [StudentController::class, 'index'])->name('student');
-        Route::get('/department/{uuid}/{set}', [StudentController::class, 'department'])->name('student.department');
-        Route::get('/department/{uuid}/{set}/add', [StudentController::class, 'add'])->name('student.add');
+        Route::get('/department/{uuid}/{set}/{level}', [StudentController::class, 'department'])->name('student.department');
+        Route::get('/department/{uuid}/{set}/{level}/add', [StudentController::class, 'add'])->name('student.add');
         Route::get('/{uuid}/edit', [StudentController::class, 'edit'])->name('student.edit');
 
         Route::post('/add', [StudentController::class, 'addPost'])->name('student.addPost');
@@ -75,11 +79,16 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::get('/{uuid}/single-exam', [ExamController::class, 'singleExam'])->name('exam.singleExam');
         Route::get('/{uuid}/add-question', [ExamController::class, 'addQuestion'])->name('exam.addQuestion');
         Route::get('/{id}/view-question', [ExamController::class, 'viewQuestion'])->name('exam.viewQuestion');
+        Route::get('/{uid}/reports', [ExamController::class, 'reports'])->name('exam.reports');
+        Route::get('/{uuid}/broadsheet', [ExamController::class, 'broadsheet'])->name('exam.broadsheet');
 
         Route::post('/add', [ExamController::class, 'addPost'])->name('exam.addPost');
         Route::post('/edit', [ExamController::class, 'editPost'])->name('exam.editPost');
         Route::post('/set-new-exam', [ExamController::class, 'setNewExamPost'])->name('exam.setNewExam');
         Route::post('/add-question', [ExamController::class, 'addQuestionPost'])->name('exam.addQuestionPost');
         Route::post('/delete-question', [ExamController::class, 'deleteQuestionPost'])->name('exam.deleteQuestionPost');
+        Route::post('/delete-exam', [ExamController::class, 'deleteExamPost'])->name('exam.deleteExamPost');
+        Route::post('/refresh-reports', [ExamController::class, 'refreshReports'])->name('exam.refreshReports');
+        Route::post('/update=report', [ExamController::class, 'updateReport'])->name('exam.updateReports');
     });
 });

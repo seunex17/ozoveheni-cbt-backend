@@ -17,4 +17,9 @@ class Course extends Model
     {
         return $this->hasMany(SingleExam::class);
     }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
+    }
 }

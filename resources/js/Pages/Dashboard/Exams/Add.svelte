@@ -3,6 +3,13 @@
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
 
     let { departments } = $props();
+
+    const startYear = 2024;
+    const currentYear = new Date().getFullYear();
+    const years = Array.from(
+        { length: currentYear - startYear + 1 },
+        (_, i) => startYear + i,
+    ).reverse();
 </script>
 
 <DashboardLayout title="Add New Exam">
@@ -15,7 +22,7 @@
                     method="POST"
                 >
                     <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Title</legend>
+                        <legend class="fieldset-legend">Semester</legend>
                         <input
                             type="text"
                             class="input"
@@ -24,7 +31,7 @@
                         />
                     </fieldset>
                     <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Subtitle</legend>
+                        <legend class="fieldset-legend">Session</legend>
                         <input
                             type="text"
                             class="input"
@@ -45,12 +52,16 @@
                     </fieldset>
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Set</legend>
-                        <input
-                            type="text"
-                            class="input"
-                            name="set"
-                            placeholder="2025"
-                        />
+                        <select class="select" name="set">
+                            <option value="" disabled selected
+                                >Pick a set</option
+                            >
+                            {#each years as year}
+                                <option value={`${year}/${year + 1}`}
+                                    >{`${year}/${year + 1}`}</option
+                                >
+                            {/each}
+                        </select>
                     </fieldset>
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Start Date</legend>
@@ -59,6 +70,18 @@
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">End Date</legend>
                         <input type="date" class="input" name="end_date" />
+                    </fieldset>
+                    <fieldset class="fieldset col-span-2 w-full">
+                        <legend class="fieldset-legend">Level</legend>
+                        <select class="select w-full" name="level">
+                            <option value="" disabled selected
+                                >Pick a level</option
+                            >
+                            <option value="nd1">ND1</option>
+                            <option value="nd2">ND2</option>
+                            <option value="hnd1">HND1</option>
+                            <option value="hnd2">HND2</option>
+                        </select>
                     </fieldset>
                     <div class="col-span-2 w-full flex justify-center">
                         <div class="max-w-sm w-full">
