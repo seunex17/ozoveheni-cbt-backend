@@ -13,7 +13,10 @@
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Events\ExamHallEvent;
+use App\Events\SeepExamHallEvent;
 use App\Http\Controllers\Controller;
+use App\Models\ExamHall;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -21,5 +24,16 @@ class DashboardController extends Controller
     public function index()
     {
         return Inertia::render('Dashboard/Index', []);
+    }
+
+    public function sweepExamHall()
+    {
+        ExamHall::truncate();
+
+        broadcast(new SeepExamHallEvent)->toOthers();
+        broadcast(new ExamHallEvent(ExamHall::count()))->toOthers();
+
+        return back()
+            ->with('success', 'Hall has been swept.');
     }
 }
