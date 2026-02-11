@@ -5,7 +5,8 @@ use App\Http\Controllers\Dashboard\CourseController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\ExamController;
-use App\Http\Controllers\Dashboard\StaffController;
+    use App\Http\Controllers\Dashboard\ExamVoucherController;
+    use App\Http\Controllers\Dashboard\StaffController;
 use App\Http\Controllers\Dashboard\StudentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Middleware\AccountActiveMiddleware;
@@ -90,5 +91,11 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::post('/delete-exam', [ExamController::class, 'deleteExamPost'])->name('exam.deleteExamPost');
         Route::post('/refresh-reports', [ExamController::class, 'refreshReports'])->name('exam.refreshReports');
         Route::post('/update=report', [ExamController::class, 'updateReport'])->name('exam.updateReports');
+    });
+
+    // Exam Vouchers
+    Route::prefix('/voucher')->group(function () {
+        Route::get('/', [ExamVoucherController::class, 'index'])->name('examVoucher');
+        Route::get('/generate', [ExamVoucherController::class, 'generate'])->name('examVoucher.generate');
     });
 });

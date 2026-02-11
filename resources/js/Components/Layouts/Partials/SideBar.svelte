@@ -6,6 +6,7 @@
         GraduationCap,
         Home,
         Notebook,
+        Pin,
         Users,
     } from "lucide-svelte";
 
@@ -47,6 +48,12 @@
             route: "/dashboard/exam",
             icon: Notebook,
             active: $page.url.startsWith("/dashboard/exam"),
+        },
+        {
+            name: "Exam Voucher",
+            route: "/dashboard/voucher",
+            icon: Pin,
+            active: $page.url.startsWith("/dashboard/voucher"),
         },
     ]);
 </script>
