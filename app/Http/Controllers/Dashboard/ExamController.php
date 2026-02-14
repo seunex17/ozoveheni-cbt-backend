@@ -18,14 +18,17 @@ use App\Models\Course;
 use App\Models\Department;
 use App\Models\Exam;
 use App\Models\Question;
+use App\Models\QuestionOption;
 use App\Models\Report;
 use App\Models\SingleExam;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Rap2hpoutre\FastExcel\FastExcel;
 
 class ExamController extends Controller
 {
@@ -330,5 +333,56 @@ class ExamController extends Controller
     {
         Report::find($request->input('id'))
             ->update($request->input());
+    }
+
+    public function downloadTemplate()
+    {
+        if (Storage::disk('public')->exists('exam/template.xlsx')) {
+            return Storage::disk('public')->download('exam/template.xlsx');
+        }
+
+        abort(404);
+    }
+
+
+    /**
+     * @throws \OpenSpout\Common\Exception\IOException
+     * @throws \OpenSpout\Common\Exception\UnsupportedTypeException
+     * @throws \OpenSpout\Reader\Exception\ReaderNotOpenedException
+     */
+    public function importQuestions(Request $request)
+    {
+        $validate = Validator::make($request->all(), [
+            'file' => 'required|mimes:xlsx',
+        ]);
+
+        if ($validate->fails()) {
+            return back()
+                ->with('error', $validate->errors()->first());
+        }
+
+        $examId = request()->input('exam_id');
+
+        (new FastExcel)->import($request->file('file'), function ($line) use ($examId) {
+            $question = Question::create([
+                'single_exam_id'       => $examId,
+                'question_text' => $line['question_text'],
+                'marks'        => $line['marks'] ?? 1,
+            ]);
+
+            for ($i = 1; $i <= 4; $i++) {
+                $optionText = $line["option_$i"] ?? null;
+
+                if ($optionText) {
+                    QuestionOption::create([
+                        'question_id' => $question->id,
+                        'option_text' => $optionText,
+                        'is_correct'  => (int)$line['correct_option_number'] === $i,
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Questions imported successfully!');
     }
 }

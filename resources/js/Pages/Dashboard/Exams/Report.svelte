@@ -97,7 +97,7 @@
     });
 </script>
 
-<DashboardLayout title="{exam.title} ({reports.length})" goBack={true}>
+<DashboardLayout title={exam.title} goBack={true}>
     <div class="w-full h-[calc(100vh-12rem)] overflow-hidden">
         <RevoGrid
             {source}

@@ -82,6 +82,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::get('/{id}/view-question', [ExamController::class, 'viewQuestion'])->name('exam.viewQuestion');
         Route::get('/{uid}/reports', [ExamController::class, 'reports'])->name('exam.reports');
         Route::get('/{uuid}/broadsheet', [ExamController::class, 'broadsheet'])->name('exam.broadsheet');
+        Route::get('/download-template', [ExamController::class, 'downloadTemplate'])->name('exam.downloadTemplate');
 
         Route::post('/add', [ExamController::class, 'addPost'])->name('exam.addPost');
         Route::post('/edit', [ExamController::class, 'editPost'])->name('exam.editPost');
@@ -91,6 +92,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::post('/delete-exam', [ExamController::class, 'deleteExamPost'])->name('exam.deleteExamPost');
         Route::post('/refresh-reports', [ExamController::class, 'refreshReports'])->name('exam.refreshReports');
         Route::post('/update=report', [ExamController::class, 'updateReport'])->name('exam.updateReports');
+        Route::post('/import-questions', [ExamController::class, 'importQuestions'])->name('exam.importQuestions');
     });
 
     // Exam Vouchers

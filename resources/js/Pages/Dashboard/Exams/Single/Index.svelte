@@ -1,12 +1,20 @@
 <script lang="ts">
     import { InfiniteScroll, Link, router } from "@inertiajs/svelte";
     import DashboardLayout from "../../../../Components/Layouts/DashboardLayout.svelte";
-    import { Plus, Trash, View } from "lucide-svelte";
+    import {
+        Plus,
+        Trash,
+        UploadIcon,
+        View,
+        FileSpreadsheet,
+        Download,
+    } from "lucide-svelte";
     import Time from "svelte-time";
 
     let { singleExam, questions } = $props();
 
     let deleteModal: HTMLDialogElement;
+    let importExcelModal: HTMLDialogElement;
     let deptId;
 
     const doDelete = (department: any) => {
@@ -29,6 +37,35 @@
                 },
             },
         );
+    };
+
+    const openImportExcelModal = () => {
+        importExcelModal.showModal();
+    };
+
+    const uploadExcel = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        if (target.files && target.files.length > 0) {
+            router.post(
+                `/dashboard/exam/import-questions`,
+                {
+                    exam_id: singleExam.id,
+                    file: target.files[0],
+                },
+                {
+                    forceFormData: true,
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => {
+                        importExcelModal.close();
+                    },
+                },
+            );
+        }
+    };
+
+    const downloadTemplate = () => {
+        window.open("/dashboard/exam/download-template", "_blank");
     };
 </script>
 
@@ -97,6 +134,12 @@
         >
             <Plus size="16" /> Add Question</Link
         >
+        <button
+            onclick={openImportExcelModal}
+            class="btn btn-secondary btn-sm btn-outline"
+        >
+            <UploadIcon size="16" /> Import Excel
+        </button>
     {/snippet}
 </DashboardLayout>
 
@@ -113,6 +156,48 @@
             <button onclick={deleteDepartment} class="btn btn-error btn-soft"
                 >Delete</button
             >
+        </div>
+    </div>
+</dialog>
+
+<dialog bind:this={importExcelModal} class="modal">
+    <div class="max-w-md modal-box">
+        <h3 class="text-lg font-bold text-center">Import Questions</h3>
+        <div class="flex flex-col items-center justify-center w-full mt-4">
+            <label
+                for="dropzone-file"
+                class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer border-base-300 bg-base-100 hover:bg-base-200"
+            >
+                <div
+                    class="flex flex-col items-center justify-center pt-5 pb-6"
+                >
+                    <FileSpreadsheet
+                        class="w-10 h-10 mb-3 text-base-content/50"
+                    />
+                    <p class="mb-2 text-sm text-base-content/70">
+                        <span class="font-semibold">Select Excel file</span>
+                    </p>
+                    <p class="text-xs text-base-content/50">XLSX files only</p>
+                </div>
+                <input
+                    id="dropzone-file"
+                    type="file"
+                    accept=".xlsx"
+                    class="hidden"
+                    onchange={uploadExcel}
+                />
+            </label>
+            <button
+                onclick={downloadTemplate}
+                class="mt-4 btn btn-ghost btn-sm text-primary"
+            >
+                <Download size="16" class="mr-2" /> Download Template
+            </button>
+        </div>
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn">Close</button>
+            </form>
         </div>
     </div>
 </dialog>
