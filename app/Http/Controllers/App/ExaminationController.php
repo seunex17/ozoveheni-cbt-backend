@@ -59,6 +59,7 @@ class ExaminationController extends Controller
             ->with(['options' => function ($query) {
                 $query->inRandomOrder();
             }])
+            ->take(50)
             ->inRandomOrder()
             ->get();
 
@@ -132,6 +133,20 @@ class ExaminationController extends Controller
             ]);
         }
 
+        if (\Illuminate\Support\now()->lt($singleExam->start)) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Exam is yet to start. Please wait some moment'.\Illuminate\Support\now(),
+            ]);
+        }
+
+        if (\Illuminate\Support\now()->gt($singleExam->end)) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Exam as been commenced',
+            ]);
+        }
+
         $attempt = Attempt::create([
             'student_id' => $student->id,
             'single_exam_id' => $singleExam->id,
@@ -157,44 +172,43 @@ class ExaminationController extends Controller
     public function saveAnswers(Request $request)
     {
         $answers = $request->input('answers');
+        $attemptId = $request->input('attempt_id');
 
-        DB::transaction(function () use ($answers, $request) {
+        DB::transaction(function () use ($answers, $attemptId) {
             foreach ($answers as $questionId => $optionId) {
-                $isCorrect = QuestionOption::where('question_id', $questionId)
-                    ->where('id', $optionId)
+                $isCorrect = QuestionOption::where('id', $optionId)
                     ->where('is_correct', true)
                     ->exists();
 
                 Answer::updateOrCreate(
-                    ['attempt_id' => $request->input('attempt_id'), 'question_id' => $questionId],
+                    ['attempt_id' => $attemptId, 'question_id' => $questionId],
                     [
                         'option_id' => $optionId,
                         'is_correct' => $isCorrect,
                     ]
                 );
-
-                $attempt = Attempt::find($request->input('attempt_id'));
-
-                $question = Question::find($questionId)
-                    ->with('singleExam')
-                    ->first();
-
-                $result = Report::updateOrCreate(
-                    [
-                        'student_id' => $attempt->student_id,
-                        'exam_id' => $question->singleExam->exam_id,
-                        'course_id' => $question->singleExam->course_id,
-                    ],
-                );
-
-                if ($isCorrect) {
-                    $result->exam = $result->exam + $question->marks;
-                    $result->save();
-                }
             }
+
+            $totalScore = Answer::where('attempt_id', $attemptId)
+                ->where('is_correct', true)
+                ->join('questions', 'answers.question_id', '=', 'questions.id')
+                ->sum('questions.marks');
+
+            $attempt = Attempt::with([
+                'singleExam.course',
+            ])->find($attemptId);
+
+            Report::updateOrCreate(
+                [
+                    'student_id' => $attempt->student_id,
+                    'exam_id' => $attempt->singleExam->exam_id,
+                    'course_id' => $attempt->singleExam->course->id,
+                ],
+                ['exam' => $totalScore]
+            );
         });
 
-        return response()->json(['status' => 'saved and graded']);
+        return response()->json(['status' => 'Score synchronized']);
     }
 
     public function submitExam(Request $request)

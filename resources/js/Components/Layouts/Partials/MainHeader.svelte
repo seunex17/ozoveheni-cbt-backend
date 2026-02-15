@@ -27,6 +27,16 @@
             },
         );
     };
+
+    const closeExamHall = () => {
+        router.post(
+            "/dashboard/close-exam-hall",
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
+    };
 </script>
 
 <div class="sticky top-0 shadow-sm navbar bg-base-100">
@@ -53,6 +63,7 @@
             style="position-anchor:--exam-hall"
         >
             <li><button onclick={sweepExamHall}>Sweep Hall</button></li>
+            <li><button onclick={closeExamHall}>Close Hall</button></li>
         </ul>
         <div class="flex-none">
             <button

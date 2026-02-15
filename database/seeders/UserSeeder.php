@@ -17,6 +17,7 @@ class UserSeeder extends Seeder
             'password' => bcrypt('password'),
             'created_at' => now(),
             'updated_at' => now(),
+            'is_admin' => true,
         ]);
     }
 }

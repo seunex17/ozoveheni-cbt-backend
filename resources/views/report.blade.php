@@ -1,4 +1,4 @@
-@php use App\Services\ReportService; @endphp
+@php use App\Services\ReportService;use App\Services\StudentResultService; @endphp
     <!doctype html>
 <html lang="en" data-theme="light">
 <head>
@@ -84,7 +84,7 @@
             @foreach($singleExams as $singleExam)
                 <th class="w-16">{{ $singleExam->course->code }}</th>
             @endforeach
-            <th class="w-16">GPA</th>
+            <th class="w-16">CGPA</th>
         </tr>
         </thead>
         <tbody>
@@ -92,15 +92,15 @@
             <tr>
                 <td>{{ $index + 1 }}</td>
                 <td class="text-left px-2 font-semibold">
-                    <div class="text-[8px]">{{ $student->reg_no }}</div>
+                    <div class="text-[14px]">{{ $student->reg_no }}</div>
                 </td>
 
                 @foreach($singleExams as $result)
-                    <td class="font-bold">
+                    <td class="font-bold text-[14px]">
                         {{ ReportService::score($exam, $student, $result->course) }}
                     </td>
                 @endforeach
-                <td class="bg-blue-50 font-black text-blue-800">{{ number_format(0, 2) }}</td>
+                <td class="font-black text-[14px]">{{ number_format(StudentResultService::calculateGPA($student, $exam), 2) }}</td>
             </tr>
         @endforeach
         </tbody>

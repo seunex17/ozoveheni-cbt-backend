@@ -344,7 +344,6 @@ class ExamController extends Controller
         abort(404);
     }
 
-
     /**
      * @throws \OpenSpout\Common\Exception\IOException
      * @throws \OpenSpout\Common\Exception\UnsupportedTypeException
@@ -365,9 +364,9 @@ class ExamController extends Controller
 
         (new FastExcel)->import($request->file('file'), function ($line) use ($examId) {
             $question = Question::create([
-                'single_exam_id'       => $examId,
+                'single_exam_id' => $examId,
                 'question_text' => $line['question_text'],
-                'marks'        => $line['marks'] ?? 1,
+                'marks' => $line['marks'] ?? 1,
             ]);
 
             for ($i = 1; $i <= 4; $i++) {
@@ -377,7 +376,7 @@ class ExamController extends Controller
                     QuestionOption::create([
                         'question_id' => $question->id,
                         'option_text' => $optionText,
-                        'is_correct'  => (int)$line['correct_option_number'] === $i,
+                        'is_correct' => (int) $line['correct_option_number'] === $i,
                     ]);
                 }
             }

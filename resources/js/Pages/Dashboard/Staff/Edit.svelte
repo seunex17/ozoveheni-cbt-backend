@@ -51,6 +51,13 @@
                             >
                         </select>
                     </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Role</legend>
+                        <select class="select" name="is_admin">
+                            <option value="0">Staff</option>
+                            <option value="1">Admin</option>
+                        </select>
+                    </fieldset>
                     <button class="btn btn-block btn-primary">
                         <Save size="16" /> Save</button
                     >

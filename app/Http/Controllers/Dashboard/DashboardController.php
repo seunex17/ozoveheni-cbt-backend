@@ -13,17 +13,40 @@
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Events\CloseExamHallEvent;
 use App\Events\ExamHallEvent;
 use App\Events\SeepExamHallEvent;
 use App\Http\Controllers\Controller;
+use App\Models\Department;
+use App\Models\Exam;
 use App\Models\ExamHall;
+use App\Models\Question;
+use App\Models\SingleExam;
+use App\Models\Student;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Dashboard/Index', []);
+        $totalStudents = Student::all()->count();
+        $activeExams = Exam::where('status', 'active')->count();
+        $questionsBank = Question::all()->count();
+        $departments = Department::all()->count();
+
+        $upcomingExams = SingleExam::query()
+            ->with(['course', 'exam.department'])
+            ->whereBetween('start', [Carbon::now(), Carbon::now()->addDays(7)])
+            ->get();
+
+        return Inertia::render('Dashboard/Index', [
+            'totalStudents' => $totalStudents,
+            'activeExams' => $activeExams,
+            'questionsBank' => $questionsBank,
+            'departments' => $departments,
+            'upcomingExams' => $upcomingExams,
+        ]);
     }
 
     public function sweepExamHall()
@@ -35,5 +58,13 @@ class DashboardController extends Controller
 
         return back()
             ->with('success', 'Hall has been swept.');
+    }
+
+    public function closeExamAll()
+    {
+        broadcast(new CloseExamHallEvent)->toOthers();
+
+        return back()
+            ->with('success', 'Hall has been closed.');
     }
 }

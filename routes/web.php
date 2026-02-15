@@ -5,12 +5,13 @@ use App\Http\Controllers\Dashboard\CourseController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\ExamController;
-    use App\Http\Controllers\Dashboard\ExamVoucherController;
-    use App\Http\Controllers\Dashboard\PrintController;
-    use App\Http\Controllers\Dashboard\StaffController;
+use App\Http\Controllers\Dashboard\ExamVoucherController;
+use App\Http\Controllers\Dashboard\PrintController;
+use App\Http\Controllers\Dashboard\StaffController;
 use App\Http\Controllers\Dashboard\StudentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Middleware\AccountActiveMiddleware;
+use App\Http\Middleware\IsAdminMiddleware;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [Authcontroller::class, 'index'])->name('home');
@@ -25,9 +26,10 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     Route::get('/', [Dashboardcontroller::class, 'index'])->name('dashboard');
 
     Route::post('/sweep-exam-hall', [Dashboardcontroller::class, 'sweepExamHall'])->name('sweepExamHall');
+    Route::post('/close-exam-hall', [Dashboardcontroller::class, 'closeExamAll'])->name('closeExamAll');
 
     // * Staffs
-    Route::prefix('/staff')->group(function () {
+    Route::prefix('/staff')->middleware([IsAdminMiddleware::class])->group(function () {
         Route::get('/', [StaffController::class, 'index'])->name('staff');
         Route::get('/{id}/update-password', [StaffController::class, 'updatePassword'])->name('staff.updatePassword');
         Route::get('/{id}/edit', [StaffController::class, 'edit'])->name('staff.edit');
@@ -39,7 +41,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     });
 
     // Departments
-    Route::prefix('/department')->group(function () {
+    Route::prefix('/department')->middleware([IsAdminMiddleware::class])->group(function () {
         Route::get('/', [DepartmentController::class, 'index'])->name('department');
         Route::get('/add', [DepartmentController::class, 'add'])->name('department.add');
         Route::get('/{uuid}/edit', [DepartmentController::class, 'edit'])->name('department.edit');
@@ -50,7 +52,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     });
 
     // Students
-    Route::prefix('/student')->group(function () {
+    Route::prefix('/student')->middleware([IsAdminMiddleware::class])->group(function () {
         Route::get('/', [StudentController::class, 'index'])->name('student');
         Route::get('/department/{uuid}/{set}/{level}', [StudentController::class, 'department'])->name('student.department');
         Route::get('/department/{uuid}/{set}/{level}/add', [StudentController::class, 'add'])->name('student.add');
@@ -62,7 +64,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     });
 
     // Course
-    Route::prefix('/course')->group(function () {
+    Route::prefix('/course')->middleware([IsAdminMiddleware::class])->group(function () {
         Route::get('/', [CourseController::class, 'index'])->name('course');
         Route::get('/add', [CourseController::class, 'add'])->name('course.add');
         Route::get('/{uuid}/edit', [CourseController::class, 'edit'])->name('course.edit');
@@ -73,7 +75,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     });
 
     // Exams
-    Route::prefix('/exam')->group(function () {
+    Route::prefix('/exam')->middleware([IsAdminMiddleware::class])->group(function () {
         Route::get('/', [ExamController::class, 'index'])->name('exam');
         Route::get('/add', [ExamController::class, 'add'])->name('exam.add');
         Route::get('/{uuid}/edit', [ExamController::class, 'edit'])->name('exam.edit');
@@ -98,7 +100,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     });
 
     // Exam Vouchers
-    Route::prefix('/voucher')->group(function () {
+    Route::prefix('/voucher')->middleware([IsAdminMiddleware::class])->group(function () {
         Route::get('/', [ExamVoucherController::class, 'index'])->name('examVoucher');
         Route::get('/generate', [ExamVoucherController::class, 'generate'])->name('examVoucher.generate');
     });

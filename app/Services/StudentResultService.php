@@ -100,8 +100,8 @@ class StudentResultService
         };
     }
 
-    public static function remarks(Student $student, Exam $exam)
-    : string {
+    public static function remarks(Student $student, Exam $exam): string
+    {
         $score = self::calculateGPA($student, $exam);
 
         return match (true) {

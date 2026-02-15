@@ -33,6 +33,13 @@
                         />
                     </fieldset>
                     <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Role</legend>
+                        <select class="select" name="is_admin">
+                            <option value="0">Staff</option>
+                            <option value="1">Admin</option>
+                        </select>
+                    </fieldset>
+                    <fieldset class="fieldset">
                         <legend class="fieldset-legend">Password</legend>
                         <input
                             type="password"
