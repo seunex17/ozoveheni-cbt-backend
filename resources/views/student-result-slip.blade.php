@@ -22,7 +22,7 @@
 
             <div class="absolute inset-0 opacity-[0.02] pointer-events-none flex flex-wrap gap-20 p-10">
                 @for ($i = 0; $i < 20; $i++)
-                    <span class="text-xs font-bold uppercase rotate-12">Apex University 2026</span>
+                    <span class="text-xs font-bold uppercase rotate-12">Ozoveheni</span>
                 @endfor
             </div>
 
@@ -33,7 +33,7 @@
                     <div class="text-center flex-1 gap-1">
                         <h1 class="text-2xl font-black uppercase text-gray-800">Ozoveheni College Of Health Technology</h1>
                         <p class="text-xs font-serif uppercase tracking-widest text-gray-500">Office of the Registrar (Academic Division)</p>
-                        <div class="mt-4 badge badge-primary badge-outline font-bold px-6 capitalize">{{ $exam->title }} ({{ $exam->subtitle }}) RESULT</div>
+                        <div class="mt-4 badge badge-primary badge-outline font-bold px-6 capitalize">{{ $exam->title }} ({{ $exam->subtitle }}) <sapn class="uppercase px-1">{{ $student->level }}</sapn>  RESULT</div>
                     </div>
 
                     <div class="avatar">
@@ -63,7 +63,7 @@
                         <th>2nd CA</th>
                         <th>EXAM</th>
                         <th>TOTAL</th>
-                        <th>GRADE</th>
+                        <th>CGPA</th>
                     </tr>
                     </thead>
                     <tbody class="text-xs font-semibold">
@@ -75,38 +75,40 @@
                             <td>{{ StudentResultService::courseScore($student, $singleExam->course, $exam, 'second_ca') }}</td>
                             <td>{{ StudentResultService::courseScore($student, $singleExam->course, $exam, 'exam') }}</td>
                             <td class="font-bold">{{ StudentResultService::courseTotalScore($student, $singleExam->course, $exam) }}</td>
-                            <td><span>{{ StudentResultService::courseGrade($student, $singleExam->course, $exam) }}</span></td>
+                            <td><span>{{ StudentResultService::courseGradePoint($student, $singleExam->course, $exam) == 0.00 ? 'C/0' : number_format(StudentResultService::courseGradePoint($student, $singleExam->course, $exam), 2) }}</span></td>
                         </tr>
                     @endforeach
                     </tbody>
                 </table>
 
-                <div class="mt-8 w-1/2 ml-auto">
-                    <table class="table table-compact w-full border border-gray-300">
-                        <tr class="bg-gray-50">
-                            <td class="font-bold">Current GPA</td>
-                            <td class="text-right">4.42</td>
-                        </tr>
-                        <tr>
-                            <td class="font-bold">Cumulative GPA</td>
-                            <td class="text-right">4.15</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-24 flex justify-between items-end px-10">
-                    <div class="text-center">
-                        <div class="w-40 border-b border-gray-400 mb-2"></div>
-                        <p class="text-[10px] font-bold uppercase">Departmental H.O.D</p>
+                <div class="mt-8 flex w-full">
+                    <div class="w-full border border-base-300 card">
+                        <div class="p-3 flex justify-between items-center">
+                            <h1 class="font-bold text-md">Cumulative GPA</h1>
+                            <h1 class="font-black text-md">{{ number_format(StudentResultService::calculateGPA($student, $exam, $exam), 2) }}</h1>
+                        </div>
                     </div>
 
-                    <div class="text-center relative">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch_Signature.png" class="absolute -top-12 left-5 w-32 mix-blend-multiply opacity-80"/>
-                        <div class="w-40 border-b border-gray-400 mb-2"></div>
-                        <p class="text-[10px] font-bold uppercase">Registrar's Signature</p>
+                    <div class="w-full border border-base-300 card">
+                        <div class="p-3 flex justify-between items-center">
+                            <h1 class="font-bold text-md">Remark</h1>
+                            <h1 class="font-black text-md">{{ StudentResultService::remarks($student, $exam) }}</h1>
+                        </div>
                     </div>
                 </div>
+
+{{--                <div class="mt-24 flex justify-between items-end px-10">--}}
+{{--                    <div class="text-center">--}}
+{{--                        <div class="w-40 border-b border-gray-400 mb-2"></div>--}}
+{{--                        <p class="text-[10px] font-bold uppercase">Departmental H.O.D</p>--}}
+{{--                    </div>--}}
+
+{{--                    <div class="text-center relative">--}}
+{{--                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch_Signature.png" class="absolute -top-12 left-5 w-32 mix-blend-multiply opacity-80"/>--}}
+{{--                        <div class="w-40 border-b border-gray-400 mb-2"></div>--}}
+{{--                        <p class="text-[10px] font-bold uppercase">Registrar's Signature</p>--}}
+{{--                    </div>--}}
+{{--                </div>--}}
             </div>
         </div>
     </div>

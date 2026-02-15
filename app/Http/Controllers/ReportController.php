@@ -57,13 +57,13 @@ class ReportController extends Controller
             ->header('Content-Disposition', 'inline; filename="invoice.pdf"');
     }
 
-    public function studentResultSlip()
+    public function studentResultSlip(string $exam, string $sid)
     {
-        $uuid = "7337071f-ba22-443a-94d5-8e2d193bb329";
+        $uuid = $exam;
         $exam = Exam::with('department')->where('uuid', $uuid)->firstOrFail();
         $student = Student::where('department_id', $exam->department_id)
             ->where('set', $exam->set)
-            ->where('id', 3)
+            ->where('id', $sid)
             ->firstOrFail();
 
         $singleExams = SingleExam::with([

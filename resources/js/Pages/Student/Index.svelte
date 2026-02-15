@@ -44,10 +44,8 @@
                             <option value="" disabled selected
                                 >Pick a level</option
                             >
-                            <option value="nd1">ND1</option>
-                            <option value="nd2">ND2</option>
-                            <option value="hnd1">HND1</option>
-                            <option value="hnd2">HND2</option>
+                            <option value="nd">ND</option>
+                            <option value="hnd">HND</option>
                         </select>
                     </fieldset>
                     <fieldset class="fieldset">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\ExamController;
     use App\Http\Controllers\Dashboard\ExamVoucherController;
+    use App\Http\Controllers\Dashboard\PrintController;
     use App\Http\Controllers\Dashboard\StaffController;
 use App\Http\Controllers\Dashboard\StudentController;
 use App\Http\Controllers\ReportController;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [Authcontroller::class, 'index'])->name('home');
 Route::get('/login', fn () => redirect()->route('home'));
 Route::get('/reports/{uuid}', [ReportController::class, 'index'])->name('reports');
-Route::get('student-result-slip', [ReportController::class, 'studentResultSlip'])->name('studentResultSlip');
+Route::get('student-result-slip/{exam}/{sid}', [ReportController::class, 'studentResultSlip'])->name('studentResultSlip');
 
 Route::post('/login', [Authcontroller::class, 'login'])->name('login');
 Route::post('/logout', [Authcontroller::class, 'logout'])->name('logout');
@@ -100,5 +101,12 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     Route::prefix('/voucher')->group(function () {
         Route::get('/', [ExamVoucherController::class, 'index'])->name('examVoucher');
         Route::get('/generate', [ExamVoucherController::class, 'generate'])->name('examVoucher.generate');
+    });
+
+    // Printing
+    Route::prefix('/print')->group(function () {
+        Route::get('/result', [PrintController::class, 'result'])->name('print.result');
+
+        Route::post('/result', [PrintController::class, 'resultPost'])->name('print.resultPost');
     });
 });

@@ -7,6 +7,7 @@
         Home,
         Notebook,
         Pin,
+        Printer,
         Users,
     } from "lucide-svelte";
 
@@ -54,6 +55,12 @@
             route: "/dashboard/voucher",
             icon: Pin,
             active: $page.url.startsWith("/dashboard/voucher"),
+        },
+        {
+            name: "Print Result",
+            route: "/dashboard/print/result",
+            icon: Printer,
+            active: $page.url.startsWith("/dashboard/print/result"),
         },
     ]);
 </script>
