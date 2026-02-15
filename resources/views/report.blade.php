@@ -8,8 +8,7 @@
     <link href="{{ public_path('daisy.css') }}" rel="stylesheet" type="text/css"/>
     <style>
         @page {
-            size: A4 landscape;
-            margin: 8mm;
+            margin: 20px;
         }
 
         body {

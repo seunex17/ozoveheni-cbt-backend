@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [Authcontroller::class, 'index'])->name('home');
 Route::get('/login', fn () => redirect()->route('home'));
 Route::get('/reports/{uuid}', [ReportController::class, 'index'])->name('reports');
+Route::get('student-result-slip', [ReportController::class, 'studentResultSlip'])->name('studentResultSlip');
 
 Route::post('/login', [Authcontroller::class, 'login'])->name('login');
 Route::post('/logout', [Authcontroller::class, 'logout'])->name('logout');

@@ -44,10 +44,44 @@ class ReportController extends Controller
         ])->render();
 
         $pdf = Browsershot::html($data)
-            ->setChromePath(env('CHROME_PATH'))
-            ->setNodeBinary(env('NODE_BINARY'))
-            ->setNpmBinary(env('NPM_BINARY'))
+            ->setChromePath(config('pdf.chrome_path'))
+            ->setNodeBinary(config('pdf.node_binary'))
+            ->setNpmBinary(config('pdf.npm_binary'))
+            ->format('A3')
             ->landscape()
+            ->noSandbox()
+            ->pdf();
+
+        return response($pdf)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="invoice.pdf"');
+    }
+
+    public function studentResultSlip()
+    {
+        $uuid = "7337071f-ba22-443a-94d5-8e2d193bb329";
+        $exam = Exam::with('department')->where('uuid', $uuid)->firstOrFail();
+        $student = Student::where('department_id', $exam->department_id)
+            ->where('set', $exam->set)
+            ->where('id', 3)
+            ->firstOrFail();
+
+        $singleExams = SingleExam::with([
+            'course',
+        ])
+            ->where('exam_id', $exam->id)
+            ->get();
+
+        $data = view('student-result-slip', [
+            'exam' => $exam,
+            'student' => $student,
+            'singleExams' => $singleExams,
+        ])->render();
+
+        $pdf = Browsershot::html($data)
+            ->setChromePath(config('pdf.chrome_path'))
+            ->setNodeBinary(config('pdf.node_binary'))
+            ->setNpmBinary(config('pdf.npm_binary'))
             ->noSandbox()
             ->pdf();
 
