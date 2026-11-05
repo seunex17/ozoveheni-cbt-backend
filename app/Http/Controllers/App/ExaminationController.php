@@ -27,6 +27,7 @@ use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response as ResponseAlias;
 
 class ExaminationController extends Controller
@@ -51,7 +52,11 @@ class ExaminationController extends Controller
 
         $now = now();
 
+        $examAttempt = Attempt::findOrFail($attempt);
+        abort_if($examAttempt->status === 'completed' || $examAttempt->submitted_at !== null, 409, 'Exam already submitted.');
+
         $singleExam = SingleExam::where('exam_id', $exam->id)
+            ->whereKey($examAttempt->single_exam_id)
             ->with(['course', 'exam'])
             ->firstOrFail();
 
@@ -63,7 +68,9 @@ class ExaminationController extends Controller
             ->inRandomOrder()
             ->get();
 
-        Attempt::find($attempt)->update([
+        $questions->each(fn ($question) => $question->options->each->makeHidden('is_correct'));
+
+        Attempt::whereKey($examAttempt->id)->whereNull('started_at')->update([
             'started_at' => $now,
         ]);
 
@@ -179,41 +186,16 @@ class ExaminationController extends Controller
      */
     public function saveAnswers(Request $request)
     {
-        $answers = $request->input('answers');
-        $attemptId = $request->input('attempt_id');
+        $input = $request->validate([
+            'attempt_id' => ['required', 'integer'],
+            'answers' => ['required', 'array', 'max:1000'],
+            'answers.*' => ['nullable', 'integer', 'min:1'],
+        ]);
 
-        DB::transaction(function () use ($answers, $attemptId) {
-            foreach ($answers as $questionId => $optionId) {
-                $isCorrect = QuestionOption::where('id', $optionId)
-                    ->where('is_correct', true)
-                    ->exists();
-
-                Answer::updateOrCreate(
-                    ['attempt_id' => $attemptId, 'question_id' => $questionId],
-                    [
-                        'option_id' => $optionId,
-                        'is_correct' => $isCorrect,
-                    ]
-                );
-            }
-
-            $totalScore = Answer::where('attempt_id', $attemptId)
-                ->where('is_correct', true)
-                ->join('questions', 'answers.question_id', '=', 'questions.id')
-                ->sum('questions.marks');
-
-            $attempt = Attempt::with([
-                'singleExam.course',
-            ])->find($attemptId);
-
-            Report::updateOrCreate(
-                [
-                    'student_id' => $attempt->student_id,
-                    'exam_id' => $attempt->singleExam->exam_id,
-                    'course_id' => $attempt->singleExam->course->id,
-                ],
-                ['exam' => $totalScore]
-            );
+        DB::transaction(function () use ($input) {
+            $attempt = Attempt::lockForUpdate()->findOrFail($input['attempt_id']);
+            abort_if($attempt->status === 'completed' || $attempt->submitted_at !== null, 409, 'Exam already submitted.');
+            $this->persistAnswers($attempt, $input['answers']);
         });
 
         return response()->json(['status' => 'Score synchronized']);
@@ -221,11 +203,108 @@ class ExaminationController extends Controller
 
     public function submitExam(Request $request)
     {
-        Attempt::find($request->input('attempt_id'))->update([
-            'submitted_at' => now(),
-            'status' => 'completed',
+        $input = $request->validate([
+            'attempt_id' => ['required', 'integer'],
+            'answers' => ['sometimes', 'array', 'max:1000'],
+            'answers.*' => ['nullable', 'integer', 'min:1'],
         ]);
 
+        DB::transaction(function () use ($input) {
+            $attempt = Attempt::lockForUpdate()->findOrFail($input['attempt_id']);
+            if ($attempt->status === 'completed' || $attempt->submitted_at !== null) {
+                return;
+            }
+
+            if (array_key_exists('answers', $input)) {
+                $this->persistAnswers($attempt, $input['answers']);
+            }
+
+            $attempt->update([
+                'submitted_at' => now(),
+                'status' => 'completed',
+            ]);
+        });
+
         return response()->json(['status' => 'Submitted successfully']);
+    }
+
+    /**
+     * The caller must hold the attempt row lock until answers and marks commit.
+     * Omitted questions are unchanged; an explicit null clears an answer.
+     */
+    private function persistAnswers(Attempt $attempt, array $answers): void
+    {
+        if ($answers === []) {
+            return;
+        }
+
+        foreach (array_keys($answers) as $questionId) {
+            if (! ctype_digit((string) $questionId) || (int) $questionId < 1) {
+                throw ValidationException::withMessages(['answers' => 'Question IDs must be positive integers.']);
+            }
+        }
+
+        $questions = Question::where('single_exam_id', $attempt->single_exam_id)
+            ->whereIn('id', array_keys($answers))->pluck('id');
+        $options = QuestionOption::whereIn('question_id', $questions)
+            ->whereIn('id', array_values(array_filter($answers, fn ($value) => $value !== null)))
+            ->get()->keyBy('id');
+
+        if ($questions->count() !== count($answers)) {
+            throw ValidationException::withMessages(['answers' => 'A question does not belong to this exam.']);
+        }
+
+        foreach ($answers as $questionId => $optionId) {
+            if ($optionId !== null && (! isset($options[$optionId]) || (int) $options[$optionId]->question_id !== (int) $questionId)) {
+                throw ValidationException::withMessages(['answers' => 'An option does not belong to its question.']);
+            }
+        }
+
+        $existing = Answer::where('attempt_id', $attempt->id)
+            ->whereIn('question_id', array_keys($answers))->get()->keyBy('question_id');
+        $inserts = [];
+        $changed = false;
+        $now = now();
+        foreach ($answers as $questionId => $optionId) {
+            $correct = $optionId !== null && $options[$optionId]->is_correct;
+            $answer = $existing->get($questionId);
+            if ($answer) {
+                $answer->fill(['option_id' => $optionId, 'is_correct' => $correct]);
+                if ($answer->isDirty()) {
+                    $answer->save();
+                    $changed = true;
+                }
+            } elseif ($optionId !== null) {
+                $inserts[] = [
+                    'attempt_id' => $attempt->id,
+                    'question_id' => $questionId,
+                    'option_id' => $optionId,
+                    'is_correct' => $correct,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+        }
+
+        if ($inserts !== []) {
+            Answer::insert($inserts);
+            $changed = true;
+        }
+        if (! $changed) {
+            return;
+        }
+
+        $totalScore = Answer::where('attempt_id', $attempt->id)
+            ->where('is_correct', true)
+            ->join('questions', 'answers.question_id', '=', 'questions.id')
+            ->sum('questions.marks');
+
+        /** @var SingleExam $singleExam */
+        $singleExam = $attempt->singleExam;
+        Report::updateOrCreate([
+            'student_id' => $attempt->student_id,
+            'exam_id' => $singleExam->exam_id,
+            'course_id' => $singleExam->course_id,
+        ], ['exam' => $totalScore]);
     }
 }
