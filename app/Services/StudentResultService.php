@@ -74,7 +74,8 @@ class StudentResultService
 
     public static function calculateGPA(Student $student, Exam $exam): float
     {
-        $reports = Report::where('student_id', $student->id)
+        $reports = Report::with('course')
+            ->where('student_id', $student->id)
             ->where('exam_id', $exam->id)
             ->get();
 
@@ -82,34 +83,97 @@ class StudentResultService
             return 0.00;
         }
 
-        $courseTot = 0;
+        $totalGradePoints = 0;
+        $totalUnits = 0;
 
         foreach ($reports as $report) {
-            $courseTot += $report->first_ca + $report->second_ca + $report->exam;
+            $score = $report->first_ca + $report->second_ca + $report->exam;
+            $gradePoint = match (true) {
+                $score >= 70 => 4.00,
+                $score >= 65 => 3.50,
+                $score >= 60 => 3.00,
+                $score >= 55 => 2.50,
+                $score >= 50 => 2.00,
+                default => 0.00,
+            };
+
+            $units = $report->course->unit ?? 0;
+            $totalGradePoints += ($gradePoint * $units);
+            $totalUnits += $units;
         }
 
-        $score = $courseTot / $reports->count();
+        return $totalUnits > 0 ? $totalGradePoints / $totalUnits : 0.00;
+    }
 
-        return match (true) {
-            $score >= 70 => 4.00,
-            $score >= 65 => 3.50,
-            $score >= 60 => 3.00,
-            $score >= 55 => 2.50,
-            $score >= 50 => 2.00,
-            default => 0.00,
-        };
+    public static function calculateCGPA(Student $student, Exam $exam): float
+    {
+        $reports = Report::with('course')
+            ->where('student_id', $student->id)
+            ->where('exam_id', $exam->id)
+            ->get();
+
+        if ($reports->isEmpty()) {
+            return 0.00;
+        }
+
+        $totalGradePoints = 0;
+        $totalUnits = 0;
+
+        foreach ($reports as $report) {
+            $score = $report->first_ca + $report->second_ca + $report->exam;
+            $gradePoint = match (true) {
+                $score >= 70 => 4.00,
+                $score >= 65 => 3.50,
+                $score >= 60 => 3.00,
+                $score >= 55 => 2.50,
+                $score >= 50 => 2.00,
+                default => 0.00,
+            };
+
+            $units = $report->course->unit ?? 0;
+            $totalGradePoints += ($gradePoint * $units);
+            $totalUnits += $units;
+        }
+
+        return $totalUnits > 0 ? $totalGradePoints / $totalUnits : 0.00;
     }
 
     public static function remarks(Student $student, Exam $exam): string
     {
-        $score = self::calculateGPA($student, $exam);
+        $score = self::calculateCGPA($student, $exam);
 
         return match (true) {
             $score >= 3.5 => 'Distinction',
-            $score >= 3,0 => 'Upper Credit',
+            $score >= 3.0 => 'Upper Credit',
             $score >= 2.5 => 'Lower Credit',
             $score >= 2.0 => 'Pass',
             default => 'Fail',
         };
+    }
+
+    public static function courseRemark(Student $student, Exam $exam): string
+    {
+        $reports = Report::where('student_id', $student->id)
+            ->where('exam_id', $exam->id)
+            ->get();
+
+        $carryOverCount = 0;
+
+        foreach ($reports as $report) {
+            $totalScore = $report->first_ca + $report->second_ca + $report->exam;
+            if ($totalScore < 50) {
+                $carryOverCount++;
+            }
+        }
+
+        if ($reports->isEmpty()) {
+            return "";
+        }
+
+        if ($carryOverCount > 0) {
+            return "C/O ($carryOverCount)";
+        }
+
+        return 'Passed';
     }
 }

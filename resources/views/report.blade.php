@@ -67,7 +67,8 @@
         <div class="flex items-center gap-3">
             <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/logo.jpg'))) }}" class="h-12">
             <div>
-                <h1 class="text-lg font-bold uppercase">Ozoveheni College of Health Technology</h1>
+                <h1 class="text-lg font-bold uppercase">OZOVEHENI COLLEGE OF HEALTH SCIENCE AND TECHNOLOGY, UHUODO.
+                    OKEHI LGA, KOGI STATE.</h1>
                 <p class="text-xs italic">Department of {{ $exam->department->name }} — {{ $exam->title }} Broadsheet ({{ $exam->subtitle }})</p>
             </div>
         </div>
@@ -84,7 +85,7 @@
             @foreach($singleExams as $singleExam)
                 <th class="w-16">{{ $singleExam->course->code }}</th>
             @endforeach
-            <th class="w-16">CGPA</th>
+            <th class="w-16">REMARK</th>
         </tr>
         </thead>
         <tbody>
@@ -100,7 +101,7 @@
                         {{ ReportService::score($exam, $student, $result->course) }}
                     </td>
                 @endforeach
-                <td class="font-black text-[14px]">{{ number_format(StudentResultService::calculateGPA($student, $exam), 2) }}</td>
+                <td class="font-black text-[14px]">{{ StudentResultService::courseRemark($student, $exam) }}</td>
             </tr>
         @endforeach
         </tbody>
@@ -109,11 +110,7 @@
     <div class="mt-12 flex justify-between px-10">
         <div class="text-center">
             <div class="border-t border-black w-40 mb-1"></div>
-            <p class="text-[9px] font-bold">EXAM OFFICER</p>
-        </div>
-        <div class="text-center">
-            <div class="border-t border-black w-40 mb-1"></div>
-            <p class="text-[9px] font-bold">H.O.D. ACCOUNTANCY</p>
+            <p class="text-[9px] font-bold">H.O.D. <span class="capitalize">{{ $exam->department->name }}</span></p>
         </div>
         <div class="text-center">
             <div class="border-t border-black w-40 mb-1"></div>

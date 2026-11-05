@@ -190,9 +190,10 @@ class ExamController extends Controller
 
     public function singleExam(string $uuid)
     {
-        $singleExam = SingleExam::where('uuid', $uuid)->firstOrFail()
+        $singleExam = SingleExam::where('uuid', $uuid)
             ->with(['exam', 'course'])
             ->firstOrFail();
+
         $questions = Question::where('single_exam_id', $singleExam->id)
             ->withCount('options')
             ->paginate();

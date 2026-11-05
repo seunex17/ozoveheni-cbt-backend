@@ -43,6 +43,7 @@
                                 <th></th>
                                 <th>Course Name</th>
                                 <th>Course Code</th>
+                                <th>Unit</th>
                                 <th>Date Added</th>
                                 <th>Actions</th>
                             </tr>
@@ -53,6 +54,7 @@
                                     <td>#{course.id}</td>
                                     <td>{course.name}</td>
                                     <td>{course.code}</td>
+                                    <td>{course.unit}</td>
                                     <td
                                         ><Time
                                             timestamp={course.created_at}

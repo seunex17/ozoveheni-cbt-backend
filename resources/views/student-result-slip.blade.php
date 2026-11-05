@@ -1,4 +1,4 @@
-@php use App\Services\StudentResultService; @endphp
+@php use App\Services\StudentLevelService;use App\Services\StudentResultService; @endphp
     <!doctype html>
 <html lang="en">
 <head>
@@ -22,7 +22,7 @@
 
             <div class="absolute inset-0 opacity-[0.02] pointer-events-none flex flex-wrap gap-20 p-10">
                 @for ($i = 0; $i < 20; $i++)
-                    <span class="text-xs font-bold uppercase rotate-12">Ozoveheni</span>
+                    <span class="text-xs font-bold uppercase rotate-12">Ozoveheni College Of Health Science And Technology</span>
                 @endfor
             </div>
 
@@ -31,9 +31,19 @@
                     <img src="{{ public_path('images/logo.jpg') }}" alt="School Logo" class="w-24 h-24 grayscale">
 
                     <div class="text-center flex-1 gap-1">
-                        <h1 class="text-2xl font-black uppercase text-gray-800">Ozoveheni College Of Health Technology</h1>
-                        <p class="text-xs font-serif uppercase tracking-widest text-gray-500">Office of the Registrar (Academic Division)</p>
-                        <div class="mt-4 badge badge-primary badge-outline font-bold px-6 capitalize">{{ $exam->title }} ({{ $exam->subtitle }}) <sapn class="uppercase px-1">{{ $student->level }}</sapn>  RESULT</div>
+                        <h1 class="text-2xl font-black uppercase text-gray-800 leading-tight">Ozoveheni College Of Health Science And Technology, Uhuodo.</h1>
+                        <p class="text-sm font-medium uppercase text-gray-600">Okehi LGA, Kogi State.</p>
+                        <p class="text-xs font-serif uppercase tracking-widest text-gray-500 mt-1">Office of the Registrar (Academic Division)</p>
+                        <div class="mt-4 flex justify-center gap-8 uppercase font-bold text-xs">
+                            <div class="flex gap-2">
+                                <span class="text-gray-500">LEVEL:</span>
+                                <span class="text-gray-800">{{ StudentLevelService::getLevelLabel($student->set) }}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="text-gray-500">SEMESTER:</span>
+                                <span class="text-gray-800">{{ str_ireplace('semester', '', $exam->title) }}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="avatar">
@@ -63,7 +73,7 @@
                         <th>2nd CA</th>
                         <th>EXAM</th>
                         <th>TOTAL</th>
-                        <th>CGPA</th>
+                        <th>GRADE</th>
                     </tr>
                     </thead>
                     <tbody class="text-xs font-semibold">
@@ -75,7 +85,9 @@
                             <td>{{ StudentResultService::courseScore($student, $singleExam->course, $exam, 'second_ca') }}</td>
                             <td>{{ StudentResultService::courseScore($student, $singleExam->course, $exam, 'exam') }}</td>
                             <td class="font-bold">{{ StudentResultService::courseTotalScore($student, $singleExam->course, $exam) }}</td>
-                            <td><span>{{ StudentResultService::courseGradePoint($student, $singleExam->course, $exam) == 0.00 ? 'C/0' : number_format(StudentResultService::courseGradePoint($student, $singleExam->course, $exam), 2) }}</span></td>
+                            <td>
+                                <span>{{ StudentResultService::courseGrade($student, $singleExam->course, $exam) }}</span>
+                            </td>
                         </tr>
                     @endforeach
                     </tbody>
@@ -84,31 +96,39 @@
                 <div class="mt-8 flex w-full">
                     <div class="w-full border border-base-300 card">
                         <div class="p-3 flex justify-between items-center">
-                            <h1 class="font-bold text-md">Cumulative GPA</h1>
-                            <h1 class="font-black text-md">{{ number_format(StudentResultService::calculateGPA($student, $exam, $exam), 2) }}</h1>
+                            <h1 class="font-bold text-md">CGPA</h1>
+                            <h1 class="font-black text-md">{{ number_format(StudentResultService::calculateCGPA($student, $exam), 2) }}</h1>
                         </div>
                     </div>
 
                     <div class="w-full border border-base-300 card">
                         <div class="p-3 flex justify-between items-center">
                             <h1 class="font-bold text-md">Remark</h1>
-                            <h1 class="font-black text-md">{{ StudentResultService::remarks($student, $exam) }}</h1>
+                            <h1 class="font-black text-md">{{ StudentResultService::courseRemark($student, $exam) }}</h1>
                         </div>
                     </div>
                 </div>
 
-{{--                <div class="mt-24 flex justify-between items-end px-10">--}}
-{{--                    <div class="text-center">--}}
-{{--                        <div class="w-40 border-b border-gray-400 mb-2"></div>--}}
-{{--                        <p class="text-[10px] font-bold uppercase">Departmental H.O.D</p>--}}
-{{--                    </div>--}}
+                {{--                <div class="mt-24 flex justify-between items-end px-10">--}}
+                {{--                    <div class="text-center">--}}
+                {{--                        <div class="w-40 border-b border-gray-400 mb-2"></div>--}}
+                {{--                        <p class="text-[10px] font-bold uppercase">Departmental H.O.D</p>--}}
+                {{--                    </div>--}}
 
-{{--                    <div class="text-center relative">--}}
-{{--                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch_Signature.png" class="absolute -top-12 left-5 w-32 mix-blend-multiply opacity-80"/>--}}
-{{--                        <div class="w-40 border-b border-gray-400 mb-2"></div>--}}
-{{--                        <p class="text-[10px] font-bold uppercase">Registrar's Signature</p>--}}
-{{--                    </div>--}}
-{{--                </div>--}}
+                {{--                    <div class="text-center relative">--}}
+                {{--                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch_Signature.png" class="absolute -top-12 left-5 w-32 mix-blend-multiply opacity-80"/>--}}
+                {{--                        <div class="w-40 border-b border-gray-400 mb-2"></div>--}}
+                {{--                        <p class="text-[10px] font-bold uppercase">Registrar's Signature</p>--}}
+                {{--                    </div>--}}
+                {{--                </div>--}}
+
+                {{-- OFFICIAL STAMP --}}
+                <div class="absolute bottom-8 right-8 z-20 pointer-events-none">
+                    <img src="{{ public_path('images/stamp.png') }}"
+                        alt="Official Stamp"
+                        class="w-32 opacity-90 mix-blend-multiply -rotate-6">
+                </div>
+
             </div>
         </div>
     </div>

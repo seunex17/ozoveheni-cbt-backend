@@ -59,7 +59,7 @@ class ExaminationController extends Controller
             ->with(['options' => function ($query) {
                 $query->inRandomOrder();
             }])
-            ->take(50)
+            ->take(60)
             ->inRandomOrder()
             ->get();
 
@@ -92,6 +92,7 @@ class ExaminationController extends Controller
 
         $exam = Exam::where('department_id', $student->department_id)
             ->where('set', $student->set)
+            ->where('level', $student->level)
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
             ->first();
@@ -104,17 +105,24 @@ class ExaminationController extends Controller
         }
 
         $singleExam = SingleExam::where('exam_id', $exam->id)
+            ->where('start', '<=', now())
+            ->where('end', '>=', now())
             ->with(['course', 'exam'])
             ->first();
 
         if (! $singleExam) {
-            return response()->json([
-                'type' => 'error',
-                'message' => 'You have no exam active yet please check back later.',
-            ]);
-        }
+            $nextExam = SingleExam::where('exam_id', $exam->id)
+                ->where('start', '>', now())
+                ->orderBy('start', 'asc')
+                ->first();
 
-        if (! $singleExam->start->isToday()) {
+            if ($nextExam) {
+                return response()->json([
+                    'type' => 'error',
+                    'message' => 'Your next exam starts at '.$nextExam->start->toTimeString().'. Please check back later.',
+                ]);
+            }
+
             return response()->json([
                 'type' => 'error',
                 'message' => 'You have no exam active yet please check back later.',
@@ -133,17 +141,17 @@ class ExaminationController extends Controller
             ]);
         }
 
-        if (\Illuminate\Support\now()->lt($singleExam->start)) {
+        if (now()->lt($singleExam->start)) {
             return response()->json([
                 'type' => 'error',
-                'message' => 'Exam is yet to start. Please wait some moment'.\Illuminate\Support\now(),
+                'message' => 'Exam is yet to start. Please wait some moment'.now(),
             ]);
         }
 
-        if (\Illuminate\Support\now()->gt($singleExam->end)) {
+        if (now()->gt($singleExam->end)) {
             return response()->json([
                 'type' => 'error',
-                'message' => 'Exam as been commenced',
+                'message' => 'Exam has ended.',
             ]);
         }
 

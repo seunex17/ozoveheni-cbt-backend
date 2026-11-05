@@ -67,7 +67,6 @@ class StudentController extends Controller
 
         $validate = Validator::make($request->all(), [
             'first_name' => 'required',
-            'middle_name' => 'required',
             'last_name' => 'required',
             'gender' => 'required',
             'reg_no' => 'required|unique:students,reg_no',
@@ -109,7 +108,6 @@ class StudentController extends Controller
 
         $validate = Validator::make($request->all(), [
             'first_name' => 'required',
-            'middle_name' => 'required',
             'last_name' => 'required',
             'gender' => 'required',
             'photo' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',

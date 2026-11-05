@@ -34,6 +34,11 @@ class ReportService
             return '0';
         }
 
-        return $report->first_ca + $report->second_ca + $report->exam;
+        $cal = $report->first_ca + $report->second_ca + $report->exam;
+        if ($cal < 50) {
+            return "$cal (C/O)";
+        }
+
+        return $cal;
     }
 }

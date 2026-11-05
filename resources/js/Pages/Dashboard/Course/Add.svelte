@@ -32,6 +32,15 @@
                             placeholder="Course Code"
                         />
                     </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Course Unit</legend>
+                        <input
+                            type="number"
+                            class="input"
+                            name="unit"
+                            placeholder="Course Unit"
+                        />
+                    </fieldset>
                     <button class="btn btn-block btn-primary">
                         <Save size="16" /> Save</button
                     >
