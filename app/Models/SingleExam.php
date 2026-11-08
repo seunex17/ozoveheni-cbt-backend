@@ -25,11 +25,13 @@ class SingleExam extends Model
         ];
     }
 
+    /** @return BelongsTo<Exam, $this> */
     public function exam(): BelongsTo
     {
         return $this->belongsTo(Exam::class);
     }
 
+    /** @return BelongsTo<Course, $this> */
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);

@@ -5,6 +5,7 @@ use App\Http\Controllers\Dashboard\CourseController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\ExamController;
+use App\Http\Controllers\Dashboard\ExamHallController;
 use App\Http\Controllers\Dashboard\ExamVoucherController;
 use App\Http\Controllers\Dashboard\PrintController;
 use App\Http\Controllers\Dashboard\StaffController;
@@ -24,6 +25,9 @@ Route::post('/logout', [Authcontroller::class, 'logout'])->name('logout');
 
 Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::class])->group(function () {
     Route::get('/', [Dashboardcontroller::class, 'index'])->name('dashboard');
+
+    Route::get('/exam-hall', [ExamHallController::class, 'index'])->name('examHall');
+    Route::get('/exam-hall/snapshot', [ExamHallController::class, 'snapshot'])->name('examHall.snapshot');
 
     Route::post('/sweep-exam-hall', [Dashboardcontroller::class, 'sweepExamHall'])->name('sweepExamHall');
     Route::post('/close-exam-hall', [Dashboardcontroller::class, 'closeExamAll'])->name('closeExamAll');

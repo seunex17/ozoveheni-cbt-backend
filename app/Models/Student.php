@@ -25,6 +25,7 @@ class Student extends Model
         'level',
     ];
 
+    /** @return BelongsTo<Department, $this> */
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);

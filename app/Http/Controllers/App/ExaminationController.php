@@ -13,7 +13,6 @@
 
 namespace App\Http\Controllers\App;
 
-use App\Events\ExamHallEvent;
 use App\Http\Controllers\Controller;
 use App\Models\Answer;
 use App\Models\Attempt;
@@ -24,6 +23,7 @@ use App\Models\QuestionOption;
 use App\Models\Report;
 use App\Models\SingleExam;
 use App\Models\Student;
+use App\Services\ExamHallMonitor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -82,7 +82,7 @@ class ExaminationController extends Controller
 
     public function studentLogin(Request $request)
     {
-        $input = $request->input();
+        $input = $request->validate(['reg_no' => ['required', 'string', 'max:255']]);
         $regNo = $input['reg_no'];
 
         // Find Student
@@ -162,22 +162,29 @@ class ExaminationController extends Controller
             ]);
         }
 
-        $attempt = Attempt::create([
-            'student_id' => $student->id,
-            'single_exam_id' => $singleExam->id,
-        ]);
+        $hallToken = Str::random(64);
+        $attempt = DB::transaction(function () use ($student, $singleExam, $hallToken): Attempt {
+            $attempt = Attempt::create([
+                'student_id' => $student->id,
+                'single_exam_id' => $singleExam->id,
+            ]);
 
-        ExamHall::create([
-            'student_id' => $student->id,
-            'attempt_id' => $attempt->id,
-        ]);
+            ExamHall::create([
+                'student_id' => $student->id,
+                'attempt_id' => $attempt->id,
+                'monitor_token_hash' => hash('sha256', $hallToken),
+            ]);
+            app(ExamHallMonitor::class)->publish('refresh');
 
-        broadcast(new ExamHallEvent(ExamHall::count()))->toOthers();
+            return $attempt;
+        });
 
         return response()->json([
             'type' => 'start',
             'student' => $student,
             'attempt_id' => $attempt->id,
+            'hall_token' => $hallToken,
+            'heartbeat_interval_seconds' => ExamHallMonitor::HEARTBEAT_SECONDS,
         ]);
     }
 
@@ -223,6 +230,7 @@ class ExaminationController extends Controller
                 'submitted_at' => now(),
                 'status' => 'completed',
             ]);
+            app(ExamHallMonitor::class)->publish('remove', $attempt->id);
         });
 
         return response()->json(['status' => 'Submitted successfully']);

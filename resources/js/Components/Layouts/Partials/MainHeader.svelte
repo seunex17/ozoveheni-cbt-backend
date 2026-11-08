@@ -1,17 +1,11 @@
 <script lang="ts">
-    import { appState } from "./../../../States/app-state.svelte";
-    import { router } from "@inertiajs/svelte";
+    import { hallState, startExamHallMonitor } from "./../../../States/exam-hall.svelte";
+    import { Link, router } from "@inertiajs/svelte";
     import { ChevronDown, DoorOpen, LogOut, Menu, PanelLeft } from "lucide-svelte";
     import { onMount } from "svelte";
     import NumberFlow from "@number-flow/svelte";
 
-    onMount(() => {
-        if (!window.Echo) return;
-        window.Echo.channel("exam-hall").listen("ExamHallEvent", (e) => {
-            appState.totalHall = e.totalStudent;
-        });
-        return () => window.Echo.leaveChannel("exam-hall");
-    });
+    onMount(startExamHallMonitor);
 
     const sweepExamHall = () => router.post("/dashboard/sweep-exam-hall", {}, { preserveScroll: true });
     const closeExamHall = () => router.post("/dashboard/close-exam-hall", {}, { preserveScroll: true });
@@ -28,11 +22,12 @@
     <details class="dropdown dropdown-end">
         <summary class="btn btn-sm gap-2 border-base-300 bg-base-100 font-medium shadow-none">
             <DoorOpen size={16} /><span class="hidden sm:inline">Exam hall</span>
-            <span class="badge badge-sm badge-ghost tabular-nums"><NumberFlow value={appState.totalHall} /></span>
+            <span class="badge badge-sm badge-ghost tabular-nums">{#if hallState.loaded}<NumberFlow value={hallState.participants.length} />{:else}—{/if}</span>
             <ChevronDown size={13} />
         </summary>
         <ul class="dropdown-content menu z-50 mt-3 w-56 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
             <li class="menu-title text-xs">Exam hall controls</li>
+            <li><Link href="/dashboard/exam-hall">View live exam hall</Link></li>
             <li><button onclick={sweepExamHall}>Sweep hall</button></li>
             <li><button onclick={closeExamHall}>Close hall</button></li>
         </ul>

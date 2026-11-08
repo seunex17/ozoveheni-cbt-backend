@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\App\ExamHallProgressController;
 use App\Http\Controllers\App\ExaminationController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,3 +13,5 @@ Route::post('/submit-exam', [ExaminationController::class, 'submitExam'])->name(
 Route::get('/test', function () {
     broadcast(new \App\Events\ExamHallEvent(0))->toOthers();
 });
+
+Route::post('/exam-hall/heartbeat', [ExamHallProgressController::class, 'store'])->name('exam.hallHeartbeat');

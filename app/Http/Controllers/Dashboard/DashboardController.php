@@ -14,7 +14,6 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Events\CloseExamHallEvent;
-use App\Events\ExamHallEvent;
 use App\Events\SeepExamHallEvent;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
@@ -23,6 +22,7 @@ use App\Models\ExamHall;
 use App\Models\Question;
 use App\Models\SingleExam;
 use App\Models\Student;
+use App\Services\ExamHallMonitor;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
@@ -54,7 +54,7 @@ class DashboardController extends Controller
         ExamHall::truncate();
 
         broadcast(new SeepExamHallEvent)->toOthers();
-        broadcast(new ExamHallEvent(ExamHall::count()))->toOthers();
+        app(ExamHallMonitor::class)->publish('reset');
 
         return back()
             ->with('success', 'Hall has been swept.');

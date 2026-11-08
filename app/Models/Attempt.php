@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property \Illuminate\Support\Carbon|null $started_at
+ * @property \Illuminate\Support\Carbon|null $submitted_at
+ */
 class Attempt extends Model
 {
     protected $fillable = [
@@ -29,6 +33,7 @@ class Attempt extends Model
         return $this->belongsTo(Student::class);
     }
 
+    /** @return BelongsTo<SingleExam, $this> */
     public function singleExam(): BelongsTo
     {
         return $this->belongsTo(SingleExam::class);
