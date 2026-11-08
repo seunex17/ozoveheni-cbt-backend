@@ -109,7 +109,7 @@ test('it calculates the correct course remark', function () {
     ]);
 
     // Initially all passed
-    expect(StudentResultService::courseRemark($student, $exam))->toBe('passed');
+    expect(StudentResultService::courseRemark($student, $exam))->toBe('Passed');
 
     // Course 2: Failed (49)
     Report::create([

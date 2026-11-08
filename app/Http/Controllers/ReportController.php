@@ -28,7 +28,7 @@ class ReportController extends Controller
         $exam = Exam::with('department')->where('uuid', $uuid)->firstOrFail();
         $students = Student::where('department_id', $exam->department_id)
             ->where('set', $exam->set)
-            ->orderBy('reg_no', 'ASC')
+            ->orderBy('reg_no', 'asc')
             ->get();
 
         $singleExam = SingleExam::with([

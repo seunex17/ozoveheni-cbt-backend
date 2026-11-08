@@ -3,40 +3,40 @@
     import MainHeader from "./Partials/MainHeader.svelte";
     import SideBar from "./Partials/SideBar.svelte";
 
-    let {
-        children,
-        actions = undefined,
-        goBack = false,
-        title = "Dashboard",
-    } = $props();
+    let { children, actions = undefined, goBack = false, title = "Dashboard", description = "" } = $props();
+    let navigationOpen = $state(false);
 </script>
 
-<main class="flex flex-col w-full h-screen bg-base-200">
-    <MainHeader />
-    <div class="flex w-full gap-6 grow overflow-hidden">
-        <SideBar />
-        <div class="flex flex-col w-full gap-2 mt-3 grow">
-            <div
-                class="flex items-center justify-between w-full mb-3.5 px-4 py-2"
-            >
-                <div class="flex items-center grow gap-2">
-                    {#if goBack}
-                        <button
-                            onclick={() => window.history.back()}
-                            class="btn btn-square btn-sm"
-                        >
-                            <ChevronLeft size="20" />
-                        </button>
-                    {/if}
-                    <h4 class="text-xl font-semibold capitalize">{title}</h4>
+<div class="dashboard-shell drawer h-dvh bg-base-200 text-base-content lg:drawer-open" data-theme="light">
+    <input id="dashboard-navigation" type="checkbox" class="drawer-toggle" bind:checked={navigationOpen} />
+    <div class="drawer-content flex min-w-0 flex-col overflow-hidden">
+        <MainHeader />
+        <main id="dashboard-content" class="min-h-0 grow overflow-y-auto" scroll-region>
+            <div class="mx-auto flex w-full max-w-400 flex-col gap-7 px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex min-w-0 items-center gap-3">
+                        {#if goBack}
+                            <button onclick={() => window.history.back()} class="btn btn-square btn-sm" aria-label="Go back">
+                                <ChevronLeft size={18} />
+                            </button>
+                        {/if}
+                        <div>
+                            <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+                            {#if description}<p class="mt-2 text-sm leading-6 text-base-content/60">{description}</p>{/if}
+                        </div>
+                    </div>
+                    {#if actions}<div class="flex flex-wrap items-center gap-2">{@render actions()}</div>{/if}
                 </div>
-                <div class="">
-                    {@render actions?.()}
-                </div>
+                <div class="min-w-0">{@render children()}</div>
+                <footer class="flex flex-wrap justify-between gap-2 border-t border-base-300 pt-5 text-xs text-base-content/50">
+                    <span>Ozoveheni College of Health Technology</span>
+                    <span>Examination administration</span>
+                </footer>
             </div>
-            <div class="grow overflow-y-auto">
-                {@render children()}
-            </div>
-        </div>
+        </main>
     </div>
-</main>
+    <div class="drawer-side z-40">
+        <label for="dashboard-navigation" aria-label="Close navigation" class="drawer-overlay"></label>
+        <SideBar onNavigate={() => navigationOpen = false} />
+    </div>
+</div>

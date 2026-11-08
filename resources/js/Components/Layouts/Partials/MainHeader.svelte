@@ -1,77 +1,44 @@
 <script lang="ts">
     import { appState } from "./../../../States/app-state.svelte";
-    import { Link, router } from "@inertiajs/svelte";
-    import { House, Power } from "lucide-svelte";
-    import { onDestroy, onMount } from "svelte";
+    import { router } from "@inertiajs/svelte";
+    import { ChevronDown, DoorOpen, LogOut, Menu, PanelLeft } from "lucide-svelte";
+    import { onMount } from "svelte";
     import NumberFlow from "@number-flow/svelte";
 
     onMount(() => {
-        const channel = window.Echo.channel("exam-hall").listen(
-            "ExamHallEvent",
-            (e) => {
-                appState.totalHall = e.totalStudent;
-            },
-        );
+        if (!window.Echo) return;
+        window.Echo.channel("exam-hall").listen("ExamHallEvent", (e) => {
+            appState.totalHall = e.totalStudent;
+        });
+        return () => window.Echo.leaveChannel("exam-hall");
     });
 
-    onDestroy(() => {
-        window.Echo.leaveChannel("exam-hall");
-    });
-
-    const sweepExamHall = () => {
-        router.post(
-            "/dashboard/sweep-exam-hall",
-            {},
-            {
-                preserveScroll: true,
-            },
-        );
-    };
-
-    const closeExamHall = () => {
-        router.post(
-            "/dashboard/close-exam-hall",
-            {},
-            {
-                preserveScroll: true,
-            },
-        );
-    };
+    const sweepExamHall = () => router.post("/dashboard/sweep-exam-hall", {}, { preserveScroll: true });
+    const closeExamHall = () => router.post("/dashboard/close-exam-hall", {}, { preserveScroll: true });
 </script>
 
-<div class="sticky top-0 shadow-sm navbar bg-base-100">
-    <div class="flex-1">
-        <Link href="/dashboard" class="text-xl btn btn-ghost">
-            <img src="/images/logo.jpg" class="w-10" alt="" />
-        </Link>
+<header class="navbar min-h-18 shrink-0 gap-3 border-b border-base-300 bg-base-100 px-4 sm:px-7 lg:px-9">
+    <label for="dashboard-navigation" class="btn btn-square btn-ghost btn-sm drawer-button lg:hidden" aria-label="Open navigation"><Menu size={20} /></label>
+    <div class="flex grow items-center gap-3">
+        <PanelLeft size={17} class="hidden text-base-content/40 lg:block" />
+        <span class="hidden text-sm text-base-content/50 sm:inline">Administration</span>
+        <span class="hidden text-base-content/25 sm:inline">/</span>
+        <span class="text-sm font-medium">Staff portal</span>
     </div>
-    <div class="flex gap-3">
-        <button
-            class="btn btn-primary btn-soft"
-            popovertarget="exam-hall"
-            style="anchor-name:--exam-hall"
-        >
-            <House size="18" /> Exam Hall
-            <span class="badge badge-primary badge-xs">
-                <NumberFlow value={appState.totalHall} />
-            </span>
-        </button>
-        <ul
-            class="dropdown menu w-52 rounded-box bg-base-100 shadow-sm"
-            popover
-            id="exam-hall"
-            style="position-anchor:--exam-hall"
-        >
-            <li><button onclick={sweepExamHall}>Sweep Hall</button></li>
-            <li><button onclick={closeExamHall}>Close Hall</button></li>
+    <details class="dropdown dropdown-end">
+        <summary class="btn btn-sm gap-2 border-base-300 bg-base-100 font-medium shadow-none">
+            <DoorOpen size={16} /><span class="hidden sm:inline">Exam hall</span>
+            <span class="badge badge-sm badge-ghost tabular-nums"><NumberFlow value={appState.totalHall} /></span>
+            <ChevronDown size={13} />
+        </summary>
+        <ul class="dropdown-content menu z-50 mt-3 w-56 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
+            <li class="menu-title text-xs">Exam hall controls</li>
+            <li><button onclick={sweepExamHall}>Sweep hall</button></li>
+            <li><button onclick={closeExamHall}>Close hall</button></li>
         </ul>
-        <div class="flex-none">
-            <button
-                onclick={() => router.post("/logout")}
-                class="btn btn-error btn-soft"
-            >
-                <Power size="18" /> Logout
-            </button>
-        </div>
-    </div>
-</div>
+    </details>
+    <div class="h-6 w-px bg-base-300"></div>
+    <button onclick={() => router.post("/logout")} class="btn btn-ghost btn-sm gap-2 font-normal text-base-content/60" aria-label="Sign out">
+        <LogOut size={16} /><span class="hidden sm:inline">Sign out</span>
+    </button>
+</header>
