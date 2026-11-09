@@ -12,7 +12,7 @@
     <div class="drawer-content flex min-w-0 flex-col overflow-hidden">
         <MainHeader />
         <main id="dashboard-content" class="min-h-0 grow overflow-y-auto" scroll-region>
-            <div class="mx-auto flex w-full max-w-400 flex-col gap-7 px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
+            <div class="mx-auto flex min-h-full w-full max-w-400 flex-col gap-7 px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div class="flex min-w-0 items-center gap-3">
                         {#if goBack}
@@ -27,8 +27,8 @@
                     </div>
                     {#if actions}<div class="flex flex-wrap items-center gap-2">{@render actions()}</div>{/if}
                 </div>
-                <div class="min-w-0">{@render children()}</div>
-                <footer class="flex flex-wrap justify-between gap-2 border-t border-base-300 pt-5 text-xs text-base-content/50">
+                <div class="min-w-0 grow">{@render children()}</div>
+                <footer class="flex shrink-0 flex-wrap justify-between gap-2 border-t border-base-300 pt-5 text-xs text-base-content/50">
                     <span>Ozoveheni College of Health Technology</span>
                     <span>Examination administration</span>
                 </footer>
