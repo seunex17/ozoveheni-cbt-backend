@@ -16,19 +16,35 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class CourseController extends Controller
 {
-    public function index()
+    public function index(Request $request): \Inertia\Response
     {
-        $courses = Course::orderBy('name')
-            ->paginate();
+        $input = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'sort' => ['nullable', 'in:name,code,newest'],
+        ]);
+        $filters = ['search' => trim($input['search'] ?? ''), 'sort' => $input['sort'] ?? 'name'];
+        $courses = Course::query()->select(['id', 'uuid', 'name', 'code', 'unit', 'created_at']);
+        if ($filters['search'] !== '') {
+            $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], Str::lower($filters['search'])).'%';
+            $courses->where(fn ($query) => $query->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term])
+                ->orWhereRaw("LOWER(code) LIKE ? ESCAPE '!'", [$term]));
+        }
+        match ($filters['sort']) {
+            'code' => $courses->orderBy('code')->orderBy('id'),
+            'newest' => $courses->orderByDesc('created_at')->orderByDesc('id'),
+            default => $courses->orderBy('name')->orderBy('id'),
+        };
 
         return Inertia::render('Dashboard/Course/Index', [
-            'courses' => Inertia::scroll(fn () => $courses),
+            'courses' => $courses->paginate(20)->withQueryString(),
+            'filters' => $filters,
+            'totalCourses' => Course::count(),
         ]);
     }
 
@@ -37,25 +53,16 @@ class CourseController extends Controller
         return Inertia::render('Dashboard/Course/Add');
     }
 
-    public function addPost(Request $request)
+    public function addPost(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $input = $request->input();
-
-        $validate = Validator::make($request->all(), [
-            'name' => 'required',
-            'code' => 'required|unique:courses',
+        $input = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:10', Rule::unique('courses', 'code')],
+            'unit' => ['nullable', 'integer', 'min:0', 'max:2147483647'],
         ]);
+        Course::create([...$input, 'uuid' => Str::uuid()]);
 
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
-        $input['uuid'] = Str::uuid();
-        Course::create($input);
-
-        return redirect()
-            ->route('course')
+        return to_route('course', ['sort' => 'newest'])
             ->with('success', 'Course added successfully.');
     }
 
@@ -68,25 +75,17 @@ class CourseController extends Controller
         ]);
     }
 
-    public function editPost(Request $request, string $uuid)
+    public function editPost(Request $request, string $uuid): \Illuminate\Http\RedirectResponse
     {
         $course = Course::where('uuid', $uuid)->firstOrFail();
-        $input = $request->input();
-
-        $validate = Validator::make($request->all(), [
-            'name' => 'required',
-            'code' => 'required|unique:courses,code,'.$course->id,
+        $input = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:10', Rule::unique('courses', 'code')->ignore($course)],
+            'unit' => ['nullable', 'integer', 'min:0', 'max:2147483647'],
         ]);
-
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
         $course->update($input);
 
-        return redirect()
-            ->route('course')
+        return to_route('course', ['search' => $course->code])
             ->with('success', 'Course updated successfully.');
     }
 
