@@ -18,7 +18,7 @@ use App\Models\Exam;
 use App\Models\Student;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class PrintController extends Controller
@@ -28,48 +28,39 @@ class PrintController extends Controller
         //
     }
 
-    public function result()
+    public function result(): \Inertia\Response
     {
-        $exams = Exam::latest('created_at')->get();
+        $exams = Exam::query()->select(['id', 'title', 'subtitle', 'set', 'level', 'department_id'])
+            ->with('department:id,name')->latest('created_at')->orderByDesc('id')->get();
 
         return Inertia::render('Dashboard/Print/Result', [
             'exams' => $exams,
         ]);
     }
 
-    public function resultPost(Request $request)
+    public function resultPost(Request $request): \Inertia\Response
     {
-        $validate = Validator::make($request->all(), [
-            'exam_id' => 'required',
-            'reg_no' => 'required',
-            'pin' => 'required',
+        $input = $request->validate([
+            'exam_id' => ['required', 'integer', 'exists:exams,id'],
+            'reg_no' => ['required', 'string', 'max:255'],
+            'pin' => ['required', 'string', 'regex:/^[0-9]{12}$/'],
         ]);
-
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
-        $exam = Exam::findOrFail($request->exam_id);
-
-        $student = Student::where('reg_no', $request->reg_no)->first();
+        $exam = Exam::findOrFail($input['exam_id']);
+        $student = Student::where('reg_no', $input['reg_no'])
+            ->where('department_id', $exam->department_id)->where('set', $exam->set)->first();
 
         if (! $student) {
-            return back()
-                ->with('error', 'Student Not Found');
+            throw ValidationException::withMessages(['reg_no' => 'No student with this registration number was found in the selected examination’s department and set.']);
         }
 
-        $voucher = Voucher::where('pin', $request->pin)->first();
-
-        if (! $voucher) {
-            return back()
-                ->with('error', 'Invalid Voucher Code');
+        $consumed = Voucher::where('pin', $input['pin'])->where('exam_id', $exam->id)->delete();
+        if ($consumed !== 1) {
+            throw ValidationException::withMessages(['pin' => 'This voucher is invalid, already used, or belongs to another examination.']);
         }
-
-        $voucher->delete();
 
         return Inertia::render('Dashboard/Print/ResultGenerate', [
             'exam' => $exam,
+            'student' => $student->only(['first_name', 'middle_name', 'last_name', 'reg_no']),
             'pdfUrl' => route('studentResultSlip', [
                 'exam' => $exam->uuid,
                 'sid' => $student->id,
