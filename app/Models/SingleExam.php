@@ -20,6 +20,7 @@ class SingleExam extends Model
     protected function casts(): array
     {
         return [
+            'duration' => 'integer',
             'start' => 'datetime',
             'end' => 'datetime',
         ];

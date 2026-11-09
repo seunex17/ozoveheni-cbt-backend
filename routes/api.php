@@ -9,6 +9,8 @@ Route::get('/load-questions/{department}/{set}/{attempt}', [ExaminationControlle
 Route::post('/student-login', [ExaminationController::class, 'studentLogin'])->name('exam.studentLogin');
 Route::post('/save-answers', [ExaminationController::class, 'saveAnswers'])->name('exam.saveAnswers');
 Route::post('/submit-exam', [ExaminationController::class, 'submitExam'])->name('exam.submitExam');
+Route::post('/resume-exam', [ExaminationController::class, 'resumeExam'])->name('exam.resumeExam');
+Route::get('/attempt-status/{attempt}', [ExaminationController::class, 'attemptStatus'])->whereNumber('attempt')->name('exam.attemptStatus');
 
 Route::get('/test', function () {
     broadcast(new \App\Events\ExamHallEvent(0))->toOthers();

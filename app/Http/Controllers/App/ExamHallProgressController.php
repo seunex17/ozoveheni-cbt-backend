@@ -49,11 +49,19 @@ class ExamHallProgressController extends Controller
                     throw ValidationException::withMessages(['current_question_number' => 'The question number cannot exceed the paper length.']);
                 }
 
-                $question = Question::where('single_exam_id', $attempt->single_exam_id)
-                    ->whereKey($input['current_question_id'])->exists();
-                $paperLength = min(60, Question::where('single_exam_id', $attempt->single_exam_id)->count());
-                if (! $question || $input['total_questions'] > $paperLength) {
-                    throw ValidationException::withMessages(['current_question_id' => 'The question or paper length does not match this exam.']);
+                if ($attempt->question_order !== null) {
+                    $order = $attempt->question_order;
+                    $allocated = $order[$input['current_question_number'] - 1] ?? null;
+                    if ($allocated === null || (int) $allocated['id'] !== (int) $input['current_question_id'] || count($order) !== (int) $input['total_questions']) {
+                        throw ValidationException::withMessages(['current_question_id' => 'The question position does not match the allocated paper.']);
+                    }
+                } else {
+                    $question = Question::where('single_exam_id', $attempt->single_exam_id)
+                        ->whereKey($input['current_question_id'])->exists();
+                    $paperLength = min(60, Question::where('single_exam_id', $attempt->single_exam_id)->count());
+                    if (! $question || $input['total_questions'] > $paperLength) {
+                        throw ValidationException::withMessages(['current_question_id' => 'The question or paper length does not match this exam.']);
+                    }
                 }
 
                 $hall->fill([

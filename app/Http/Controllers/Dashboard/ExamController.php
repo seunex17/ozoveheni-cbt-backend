@@ -158,7 +158,7 @@ class ExamController extends Controller
             'schedule_date' => 'required|date',
             'start_time' => 'required',
             'end_time' => 'required',
-            'duration' => 'required',
+            'duration' => 'required|integer|min:1',
         ]);
 
         if ($validate->fails()) {

@@ -10,6 +10,8 @@ The header count means **unsubmitted attempts registered in the hall**. It inclu
 
 ## 1. Login and store the monitoring credential
 
+For real exams, enroll using `client: "flutter"` and a securely stored UUID v4 `login_id` as specified in [FLUTTER_REAL_EXAM_API.md](FLUTTER_REAL_EXAM_API.md). That contract adds a separate `attempt_token` and protected resume/status endpoints. The registration-only example below describes the legacy response shape; do not use legacy mode as a fallback for Flutter real exams. Login recovery/resume rotates the hall token; replace the stored value and retain your telemetry sequence.
+
 Continue using `POST /api/student-login` with the existing registration-number payload:
 
 ```json
@@ -32,9 +34,9 @@ The student object shown here is abbreviated. Only treat `type: start` as a succ
 
 Persist `attempt_id`, `hall_token`, the latest reserved telemetry sequence, and the exam's existing local recovery state before starting the exam. Use the Flutter app's platform-appropriate secure credential storage for the token. Never log it, put it in a URL, send it over Reverb, or include it in screenshots or crash-report breadcrumbs. Laravel stores only its SHA-256 hash.
 
-The token belongs to one attempt and only authorizes the **new monitoring endpoint**. It is not a Sanctum access token and is not a substitute for authentication on the legacy answer APIs. Registration-number-only login and the existing load/save/submit APIs retain their current authentication limitations; a broader client authentication rollout is separate work.
+The token belongs to one attempt and only authorizes the **new monitoring endpoint**. It is not a Sanctum access token and is not a substitute for authentication on the legacy answer APIs. Initial admission remains registration-number-based. Newly enrolled Flutter real-exam attempts now require their separate attempt token on load/save/submit/resume/status, as specified in the real-exam contract; legacy attempts retain their previous authentication limitations.
 
-Existing attempts created before this migration have no monitoring token. They remain visible but untracked. This change does not add an attempt-resume/token-reissue endpoint, change the existing “already taken” rule, or permit a second attempt. Do not repeatedly call login to recover a lost token.
+Existing attempts created before this migration have no monitoring token. They remain visible but untracked. The real-exam session contract now adds token-protected resume for newly enrolled Flutter attempts; it does not permit another attempt or recover missing allocation/credentials for old legacy attempts. For protected real-exam sessions, recover using the original secret login ID or attempt token as documented in the real-exam contract; do not create a fresh login ID to bypass an existing attempt.
 
 ## 2. Send heartbeat and progress updates
 
@@ -73,7 +75,7 @@ Send all three question fields together, or omit all three. Before questions hav
 {"attempt_id": 123, "sequence": 1}
 ```
 
-Presence-only updates preserve a previously reported position. No question number is invented before the first progress report. The server checks question ownership against the attempt's paper, numeric bounds, and that the reported paper length does not exceed the paper's available questions. The displayed ordinal is client-reported; the server does not currently persist or verify the client's randomized question ordering.
+Presence-only updates preserve a previously reported position. No question number is invented before the first progress report. The server checks question ownership against the attempt's paper, numeric bounds, and that the reported paper length does not exceed the paper's available questions. For attempts loaded with the real-exam session contract, Laravel verifies the ordinal, question ID and paper length against the persisted allocation. Legacy unallocated attempts retain the paper-membership/range checks.
 
 Success:
 
@@ -264,7 +266,7 @@ On app lifecycle resume, call `reportNow()` with the current restored position. 
 | Network error / `5xx` | Preserve local answers and continue the exam's established offline policy. Retry monitoring on the next heartbeat with a fresh sequence and latest position. |
 | `429` from deployment controls | Respect backoff/Retry-After; do not generate rapid retries. The application adds no broad shared-IP limiter to this endpoint. |
 
-Do not show a successful exam submission because a heartbeat succeeded. Submission must use the existing `POST /api/submit-exam` flow and wait for its acknowledgement. Send the final answer map using the previously added optional `answers` field, with explicit `null` for cleared answers. A legacy attempt-ID-only submission can still lose an answer the client never sent.
+Do not show a successful exam submission because a heartbeat succeeded. Submission must use the existing `POST /api/submit-exam` flow and wait for its acknowledgement. Protected Flutter submissions require the final `answers` map and `submission_id` as documented in the real-exam contract, with explicit `null` for cleared answers. The answers field remains optional only for the controlled legacy flow. A legacy attempt-ID-only submission can still lose an answer the client never sent.
 
 ## 5. Existing Flutter/Reverb control subscriptions
 
