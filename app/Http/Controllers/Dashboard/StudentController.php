@@ -16,6 +16,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Student;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -24,27 +25,68 @@ use Inertia\Inertia;
 
 class StudentController extends Controller
 {
-    public function index()
+    public function index(Request $request): \Inertia\Response
     {
-        $departments = Department::orderBy('name')->get();
+        $input = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'department' => ['nullable', 'uuid'],
+            'set' => ['nullable', 'string', 'max:30'],
+            'level' => ['nullable', 'string', 'max:20'],
+            'sort' => ['nullable', 'in:name,registration,newest'],
+        ]);
+        $filters = [
+            'search' => trim($input['search'] ?? ''),
+            'department' => $input['department'] ?? '',
+            'set' => $input['set'] ?? '',
+            'level' => Str::lower($input['level'] ?? ''),
+            'sort' => $input['sort'] ?? 'name',
+        ];
+        $students = Student::query()->select([
+            'id', 'uuid', 'department_id', 'first_name', 'middle_name', 'last_name', 'reg_no', 'set', 'level', 'photo',
+        ])->with('department:id,name,uuid');
+        if ($filters['search'] !== '') {
+            $terms = preg_split('/\s+/', $filters['search']) ?: [];
+            foreach ($terms as $term) {
+                $students->where(function (Builder $query) use ($term): void {
+                    foreach (['first_name', 'middle_name', 'last_name', 'reg_no'] as $column) {
+                        $query->orWhereRaw("LOWER({$column}) LIKE ? ESCAPE '!'", ['%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], Str::lower($term)).'%']);
+                    }
+                });
+            }
+        }
+        if ($filters['department'] !== '') {
+            $students->whereHas('department', fn (Builder $query) => $query->where('uuid', $filters['department']));
+        }
+        if ($filters['set'] !== '') {
+            $students->where('set', $filters['set']);
+        }
+        if ($filters['level'] !== '') {
+            $students->whereRaw('LOWER(level) = ?', [$filters['level']]);
+        }
+        match ($filters['sort']) {
+            'registration' => $students->orderBy('reg_no')->orderBy('id'),
+            'newest' => $students->orderByDesc('created_at')->orderByDesc('id'),
+            default => $students->orderBy('first_name')->orderBy('last_name')->orderBy('id'),
+        };
 
         return Inertia::render('Student/Index', [
-            'departments' => $departments,
+            'students' => $students->paginate(20)->withQueryString(),
+            'departments' => fn () => Department::orderBy('name')->get(['id', 'uuid', 'name']),
+            'sets' => fn () => Student::query()->select('set')->distinct()->orderByDesc('set')->pluck('set')->filter()->values(),
+            'levels' => fn () => Student::query()->select('level')->distinct()->pluck('level')->filter()->map(fn (string $level): string => Str::lower($level))->unique()->sort()->values(),
+            'filters' => $filters,
+            'totalStudents' => Student::count(),
         ]);
     }
 
-    public function department(string $uuid, string $set, string $level)
+    public function department(string $uuid, string $set, string $level): \Illuminate\Http\RedirectResponse
     {
         $set = Str::replace('-', '/', $set);
         $department = Department::where('uuid', $uuid)->firstOrFail();
-        $students = Student::where('department_id', $department->id)
-            ->where('set', $set)
-            ->orderBy('first_name')
-            ->paginate();
 
-        return Inertia::render('Student/Department', [
-            'department' => $department,
-            'students' => Inertia::scroll(fn () => $students),
+        return to_route('student', [
+            'department' => $department->uuid,
+            'set' => $set,
             'level' => $level,
         ]);
     }
