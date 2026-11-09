@@ -3,12 +3,12 @@
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
     import { Save } from "lucide-svelte";
 
-    let { user } = $props();
+    let { user, errors = {} } = $props();
 </script>
 
 <DashboardLayout title="Edit {user.name}" goBack={true}>
     <div class="flex items-center justify-center w-full">
-        <div class="shadow-sm card w-96 bg-base-100">
+        <div class="shadow-sm card w-full max-w-xl bg-base-100">
             <div class="card-body">
                 <Form
                     class="space-y-3"
@@ -16,11 +16,12 @@
                     action="/dashboard/staff/{user.id}/edit"
                     disableWhileProcessing
                 >
+                    {#each Object.values(errors) as error}<p class="text-sm text-error" role="alert">{error}</p>{/each}
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Username</legend>
                         <input
                             type="text"
-                            class="input"
+                            class="input w-full"
                             name="name"
                             value={user.name}
                             placeholder="Username"
@@ -30,7 +31,7 @@
                         <legend class="fieldset-legend">Email Address</legend>
                         <input
                             type="email"
-                            class="input"
+                            class="input w-full"
                             name="email"
                             value={user.email}
                             placeholder="Email Address"
@@ -38,7 +39,7 @@
                     </fieldset>
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Status</legend>
-                        <select class="select" name="status">
+                        <select class="select w-full" name="status">
                             <option
                                 value="active"
                                 selected={user.status === "active"}
@@ -53,9 +54,9 @@
                     </fieldset>
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Role</legend>
-                        <select class="select" name="is_admin">
-                            <option value="0">Staff</option>
-                            <option value="1">Admin</option>
+                        <select class="select w-full" name="is_admin">
+                            <option value="0" selected={!Number(user.is_admin)}>Staff</option>
+                            <option value="1" selected={Boolean(Number(user.is_admin))}>Admin</option>
                         </select>
                     </fieldset>
                     <button class="btn btn-block btn-primary">

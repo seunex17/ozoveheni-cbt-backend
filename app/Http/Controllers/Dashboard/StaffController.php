@@ -15,18 +15,42 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class StaffController extends Controller
 {
-    public function index()
+    public function index(Request $request): \Inertia\Response
     {
-        $users = User::latest('created_at')->paginate();
+        $input = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'in:active,inactive'],
+            'role' => ['nullable', 'in:admin,staff'],
+            'sort' => ['nullable', 'in:name,newest'],
+        ]);
+        $filters = ['search' => trim($input['search'] ?? ''), 'status' => $input['status'] ?? '', 'role' => $input['role'] ?? '', 'sort' => $input['sort'] ?? 'name'];
+        $users = User::query()->select(['id', 'name', 'email', 'status', 'is_admin', 'created_at']);
+        if ($filters['search'] !== '') {
+            $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], Str::lower($filters['search'])).'%';
+            $users->where(fn (Builder $query) => $query->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term])->orWhereRaw("LOWER(email) LIKE ? ESCAPE '!'", [$term]));
+        }
+        if ($filters['status'] !== '') {
+            $users->where('status', $filters['status']);
+        }
+        if ($filters['role'] !== '') {
+            $users->where('is_admin', $filters['role'] === 'admin');
+        }
+        if ($filters['sort'] === 'newest') {
+            $users->orderByDesc('created_at')->orderByDesc('id');
+        } else {
+            $users->orderBy('name')->orderBy('id');
+        }
 
         return Inertia::render('Dashboard/Staff/Manage', [
-            'users' => Inertia::scroll(fn () => $users),
+            'users' => $users->paginate(20)->withQueryString(), 'filters' => $filters, 'totalStaff' => User::count(),
         ]);
     }
 
@@ -39,46 +63,27 @@ class StaffController extends Controller
         ]);
     }
 
-    public function updatePasswordPost(Request $request, string $id)
+    public function updatePasswordPost(Request $request, string $id): \Illuminate\Http\RedirectResponse
     {
         $user = User::findOrFail($id);
-        $input = $request->input();
+        $input = $request->validate(['password' => ['required', 'string', 'min:8', 'confirmed']]);
+        $user->update(['password' => $input['password']]);
 
-        $validate = Validator::make($request->all(), [
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
-        $user->password = bcrypt($input['password']);
-        $user->save();
-
-        return redirect()->route('staff')
-            ->with('success', 'Password updated successfully.');
+        return to_route('staff', ['search' => $user->email])->with('success', 'Password updated successfully.');
     }
 
-    public function editPost(Request $request, string $id)
+    public function editPost(Request $request, string $id): \Illuminate\Http\RedirectResponse
     {
         $user = User::findOrFail($id);
-
-        $validate = Validator::make($request->all(), [
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'name' => ['required', 'string', 'max:255', 'unique:users,name,'.$user->id],
-            'status' => ['required', 'string'],
+        $input = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user)],
+            'name' => ['required', 'string', 'max:255', Rule::unique('users', 'name')->ignore($user)],
+            'status' => ['required', 'in:active,inactive'],
+            'is_admin' => ['required', 'boolean'],
         ]);
+        $user->update($input);
 
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
-        $user->update($request->input());
-
-        return redirect()->route('staff')
-            ->with('success', 'Account updated successfully.');
+        return to_route('staff', ['search' => $user->email])->with('success', 'Account updated successfully.');
     }
 
     public function edit(string $id)
@@ -95,22 +100,17 @@ class StaffController extends Controller
         return Inertia::render('Dashboard/Staff/Add');
     }
 
-    public function addPost(Request $request)
+    public function addPost(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $validate = Validator::make($request->all(), [
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'name' => ['required', 'string', 'max:255', 'unique:users,name'],
+        $input = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
+            'name' => ['required', 'string', 'max:255', Rule::unique('users', 'name')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'is_admin' => ['sometimes', 'boolean'],
+            'status' => ['sometimes', 'in:active,inactive'],
         ]);
+        User::create($input);
 
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
-        User::create($request->input());
-
-        return redirect()->route('staff')
-            ->with('success', 'Account added successfully.');
+        return to_route('staff', ['sort' => 'newest'])->with('success', 'Account added successfully.');
     }
 }

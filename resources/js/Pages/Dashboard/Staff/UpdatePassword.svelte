@@ -2,12 +2,12 @@
     import { Form } from "@inertiajs/svelte";
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
 
-    let { user } = $props();
+    let { user, errors = {} } = $props();
 </script>
 
 <DashboardLayout title="Update {user.name} Password" goBack={true}>
     <div class="flex items-center justify-center w-full">
-        <div class="shadow-sm card w-96 bg-base-100">
+        <div class="shadow-sm card w-full max-w-xl bg-base-100">
             <div class="card-body">
                 <Form
                     class="space-y-3"
@@ -15,11 +15,12 @@
                     action="/dashboard/staff/{user.id}/update-password"
                     disableWhileProcessing
                 >
+                    {#each Object.values(errors) as error}<p class="text-sm text-error" role="alert">{error}</p>{/each}
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">New password</legend>
                         <input
                             type="password"
-                            class="input"
+                            class="input w-full"
                             name="password"
                             placeholder="Password"
                         />
@@ -29,7 +30,7 @@
                         >
                         <input
                             type="password"
-                            class="input"
+                            class="input w-full"
                             name="password_confirmation"
                             placeholder="Confirm Password"
                         />
