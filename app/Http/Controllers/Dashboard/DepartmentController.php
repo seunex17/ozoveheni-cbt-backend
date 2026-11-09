@@ -22,13 +22,29 @@ use Inertia\Inertia;
 
 class DepartmentController extends Controller
 {
-    public function index()
+    public function index(Request $request): \Inertia\Response
     {
-        $departments = Department::orderBy('name')
-            ->paginate();
+        $input = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'sort' => ['nullable', 'in:name,newest'],
+        ]);
+        $filters = [
+            'search' => trim($input['search'] ?? ''),
+            'sort' => $input['sort'] ?? 'name',
+        ];
+        $departments = Department::query()->select(['id', 'uuid', 'name', 'created_at']);
+        if ($filters['search'] !== '') {
+            $departments->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", ['%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], Str::lower($filters['search'])).'%']);
+        }
+        match ($filters['sort']) {
+            'newest' => $departments->orderByDesc('created_at')->orderByDesc('id'),
+            default => $departments->orderBy('name')->orderBy('id'),
+        };
 
         return Inertia::render('Dashboard/Department/Index', [
-            'departments' => Inertia::scroll(fn () => $departments),
+            'departments' => $departments->paginate(20)->withQueryString(),
+            'filters' => $filters,
+            'totalDepartments' => Department::count(),
         ]);
     }
 
@@ -37,23 +53,18 @@ class DepartmentController extends Controller
         return Inertia::render('Dashboard/Department/Add');
     }
 
-    public function addPost(Request $request)
+    public function addPost(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $validate = Validator::make($request->all(), [
-            'name' => 'required',
+        $input = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
         ]);
 
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
         Department::create([
-            'name' => $request->name,
+            'name' => $input['name'],
             'uuid' => Str::uuid(),
         ]);
 
-        return redirect()->route('department')
+        return redirect()->route('department', ['sort' => 'newest'])
             ->with('success', 'Department created successfully.');
     }
 
