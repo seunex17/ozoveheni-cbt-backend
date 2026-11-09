@@ -27,7 +27,7 @@ class ExamVoucherService
      */
     public static function generate(int $quantity, Exam $exam)
     {
-        $ref = time();
+        $ref = (string) Str::uuid();
         $vouchersToStore = [];
 
         for ($i = 0; $i < $quantity; $i++) {

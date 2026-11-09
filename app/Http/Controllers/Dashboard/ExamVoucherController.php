@@ -23,9 +23,10 @@ use Spatie\Browsershot\Browsershot;
 
 class ExamVoucherController extends Controller
 {
-    public function index()
+    public function index(): \Inertia\Response
     {
-        $exams = Exam::latest('created_at')->get();
+        $exams = Exam::query()->select(['id', 'title', 'subtitle', 'set', 'level', 'department_id'])
+            ->with('department:id,name')->latest('created_at')->orderByDesc('id')->get();
 
         return Inertia::render('Dashboard/ExamVoucher/Index', [
             'exams' => $exams,
@@ -35,19 +36,26 @@ class ExamVoucherController extends Controller
     /**
      * @throws \Throwable
      */
-    public function generate(Request $request)
+    public function generate(Request $request): \Illuminate\Http\Response
     {
-        $exam = Exam::findOrFail($request->input('exam_id'));
-        $ref = ExamVoucherService::generate($request->input('qty'), $exam);
+        $input = $request->validate([
+            'exam_id' => ['required', 'integer', 'exists:exams,id'],
+            'qty' => ['required', 'integer', 'min:1', 'max:500'],
+        ]);
+        $exam = Exam::findOrFail($input['exam_id']);
+        $ref = ExamVoucherService::generate((int) $input['qty'], $exam);
 
         $vouchers = Voucher::where('reference', $ref)
             ->get();
 
         $data = view('exam.voucher', [
             'vouchers' => $vouchers,
+            'exam' => $exam,
         ])->render();
 
         $pdf = Browsershot::html($data)
+            ->format('A4')
+            ->showBackground()
             ->setChromePath(config('pdf.chrome_path'))
             ->setNodeBinary(config('pdf.node_binary'))
             ->setNpmBinary(config('pdf.npm_binary'))
@@ -56,6 +64,6 @@ class ExamVoucherController extends Controller
 
         return response($pdf)
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="invoice.pdf"');
+            ->header('Content-Disposition', 'inline; filename="exam-vouchers.pdf"');
     }
 }
