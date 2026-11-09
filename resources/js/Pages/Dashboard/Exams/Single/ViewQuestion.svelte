@@ -4,9 +4,9 @@
     let { question } = $props();
 </script>
 
-<DashboardLayout title="Manage Question" goBack={true}>
+<DashboardLayout title="Review question" description="Review the question, marks and correct answer." goBack={true}>
     <div class="w-full flex justify-center items-center">
-        <div class="w-full max-w-xl card bg-base-100">
+        <div class="w-full max-w-xl card card-border bg-base-100">
             <div class="card-body">
                 <div class="flex justify-between items-start">
                     <span class="text-sm opacity-50">Question Preview</span>
@@ -15,7 +15,7 @@
                     >
                 </div>
 
-                <h3 class="text-lg font-semibold mt-2">
+                <h3 class="mt-2 whitespace-pre-wrap break-words text-base font-semibold leading-7">
                     {question.question_text || "Enter your question..."}
                 </h3>
 
@@ -31,7 +31,7 @@
                                     ? 'bg-success border-success'
                                     : 'border-base-300'}"
                             ></div>
-                            <span class={option.is_correct ? "font-bold" : ""}>
+                            <span class={`min-w-0 break-words ${option.is_correct ? "font-semibold" : ""}`}>
                                 {option.option_text || "..."}
                             </span>
                             {#if option.is_correct}

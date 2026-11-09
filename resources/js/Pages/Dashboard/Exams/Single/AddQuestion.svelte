@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useForm } from "@inertiajs/svelte";
+    import { useForm, Link } from "@inertiajs/svelte";
     import DashboardLayout from "../../../../Components/Layouts/DashboardLayout.svelte";
     import { X } from "lucide-svelte";
     import autoAnimate from "@formkit/auto-animate";
@@ -40,9 +40,12 @@
         }));
     };
 
-    const submit = () => {
+    const submit = (event: SubmitEvent) => {
+        event.preventDefault();
+        if ($form.processing) return;
         $form.post("/dashboard/exam/add-question", {
-            onSuccess: () => {
+            onSuccess: (page) => {
+                if ((page.props.flash as any)?.error) return;
                 $form.reset();
                 $form.single_exam_id = singleExam?.id;
                 $form.options = [
@@ -55,27 +58,29 @@
 </script>
 
 <DashboardLayout
-    title="{singleExam.course.name} ({singleExam.course.code})"
-    goBack={true}
+    title="Add question"
+    description={`${singleExam.course.code} · ${singleExam.course.name}`}
 >
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6">
-        <div class="card bg-base-100 p-6">
-            <div class="space-y-4">
+    {#snippet actions()}<Link href={`/dashboard/exam/${singleExam.uuid}/single-exam`} class="btn btn-ghost btn-sm">Back to question bank</Link>{/snippet}
+    <div class="grid items-start gap-6 xl:grid-cols-2">
+        <section class="card card-border bg-base-100"><form onsubmit={submit} class="card-body gap-5 p-5 sm:p-6" aria-busy={$form.processing}>
+                <h2 class="text-base font-semibold">Question details</h2><p class="text-sm leading-6 text-base-content/65">Write the question, add at least two options and select the correct answer.</p>
+                {#each Object.values($form.errors) as error}<p class="text-sm text-error" role="alert">{error}</p>{/each}
                 <fieldset class="fieldset">
-                    <legend class="fieldset-legend">Question Text</legend>
+                    <legend class="fieldset-legend">Question text</legend>
                     <textarea
-                        class="textarea h-24 w-full"
+                        class="textarea min-h-32 w-full" required disabled={$form.processing} aria-label="Question text"
                         bind:value={$form.question_text}
                         placeholder="e.g. What is the capital of Nigeria?"
                     ></textarea>
                 </fieldset>
 
                 <fieldset class="fieldset">
-                    <legend class="fieldset-legend">Mark</legend>
+                    <legend class="fieldset-legend">Marks</legend>
                     <input
                         type="number"
                         class="input w-full"
-                        bind:value={$form.points}
+                        bind:value={$form.points} required min="1" step="1" disabled={$form.processing} aria-label="Marks for this question"
                     />
                 </fieldset>
 
@@ -87,7 +92,7 @@
                             <input
                                 type="radio"
                                 name="correct_answer"
-                                class="radio radio-primary"
+                                class="radio" aria-label={`Mark option ${i + 1} as correct`} disabled={$form.processing} required
                                 checked={option.is_correct}
                                 onchange={() => setCorrect(i)}
                             />
@@ -95,13 +100,13 @@
                             <input
                                 type="text"
                                 bind:value={option.option_text}
-                                class="input input-primary w-full"
+                                class="input w-full" aria-label={`Option ${i + 1} text`} required disabled={$form.processing}
                                 placeholder="Option {i + 1}"
                             />
 
                             <button
                                 type="button"
-                                class="btn btn-error btn-soft btn-sm btn-circle"
+                                class="btn btn-ghost btn-sm btn-square" aria-label={`Remove option ${i + 1}`} disabled={$form.processing || $form.options.length <= 2}
                                 onclick={() => removeOption(i)}
                             >
                                 <X size="14" />
@@ -112,29 +117,30 @@
 
                 <div class="divider"></div>
 
-                <div class="flex justify-between">
+                <div class="flex flex-wrap justify-between gap-3">
                     <button
                         type="button"
-                        class="btn btn-outline"
+                        class="btn"
+                        disabled={$form.processing}
                         onclick={addOption}
                     >
                         Add Option
                     </button>
                     <button
-                        onclick={submit}
+                        type="submit"
                         class="btn btn-primary"
                         disabled={$form.processing ||
                             $form.question_text === "" ||
                             $form.options.length < 2}
                     >
-                        Save Question
+                        {$form.processing ? "Saving…" : "Save question"}
                     </button>
                 </div>
-            </div>
-        </div>
+            </form>
+        </section>
 
-        <div class="sticky top-6 h-fit">
-            <div class="card bg-base-100 border-t-4 border-primary">
+        <div class="h-fit xl:sticky xl:top-6">
+            <div class="card card-border bg-base-100">
                 <div class="card-body">
                     <div class="flex justify-between items-start">
                         <span class="text-sm opacity-50">Question Preview</span>
@@ -143,7 +149,7 @@
                         >
                     </div>
 
-                    <h3 class="text-lg font-semibold mt-2">
+                    <h3 class="mt-2 whitespace-pre-wrap break-words text-base font-semibold leading-7">
                         {$form.question_text || "Enter your question..."}
                     </h3>
 
@@ -160,7 +166,7 @@
                                         : 'border-base-300'}"
                                 ></div>
                                 <span
-                                    class={option.is_correct ? "font-bold" : ""}
+                                    class={`min-w-0 break-words ${option.is_correct ? "font-semibold" : ""}`}
                                 >
                                     {option.option_text || "..."}
                                 </span>

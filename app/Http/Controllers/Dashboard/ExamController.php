@@ -22,6 +22,7 @@ use App\Models\QuestionOption;
 use App\Models\Report;
 use App\Models\SingleExam;
 use App\Models\Student;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -32,14 +33,49 @@ use Rap2hpoutre\FastExcel\FastExcel;
 
 class ExamController extends Controller
 {
-    public function index()
+    public function index(Request $request): \Inertia\Response
     {
-        $exams = Exam::latest('created_at')
-            ->with('department')
-            ->paginate();
+        $input = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'department' => ['nullable', 'uuid'],
+            'set' => ['nullable', 'string', 'max:30'],
+            'level' => ['nullable', 'string', 'max:20'],
+            'status' => ['nullable', 'in:pending,active,completed'],
+            'sort' => ['nullable', 'in:newest,title,start_date'],
+        ]);
+        $filters = [
+            'search' => trim($input['search'] ?? ''), 'department' => $input['department'] ?? '',
+            'set' => $input['set'] ?? '', 'level' => Str::lower($input['level'] ?? ''),
+            'status' => $input['status'] ?? '', 'sort' => $input['sort'] ?? 'newest',
+        ];
+        $exams = Exam::query()->with('department:id,uuid,name');
+        if ($filters['search'] !== '') {
+            $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], Str::lower($filters['search'])).'%';
+            $exams->where(fn (Builder $query) => $query->whereRaw("LOWER(title) LIKE ? ESCAPE '!'", [$term])->orWhereRaw("LOWER(subtitle) LIKE ? ESCAPE '!'", [$term]));
+        }
+        if ($filters['department'] !== '') {
+            $exams->whereHas('department', fn (Builder $query) => $query->where('uuid', $filters['department']));
+        }
+        foreach (['set', 'status'] as $field) {
+            if ($filters[$field] !== '') {
+                $exams->where($field, $filters[$field]);
+            }
+        }
+        if ($filters['level'] !== '') {
+            $exams->whereRaw('LOWER(level) = ?', [$filters['level']]);
+        }
+        match ($filters['sort']) {
+            'title' => $exams->orderBy('title')->orderBy('id'),
+            'start_date' => $exams->orderByDesc('start_date')->orderByDesc('id'),
+            default => $exams->orderByDesc('created_at')->orderByDesc('id'),
+        };
 
         return Inertia::render('Dashboard/Exams/Index', [
-            'exams' => Inertia::scroll(fn () => $exams),
+            'exams' => $exams->paginate(20)->withQueryString(),
+            'filters' => $filters, 'totalExams' => Exam::count(),
+            'departments' => fn () => Department::orderBy('name')->get(['id', 'uuid', 'name']),
+            'sets' => fn () => Exam::query()->select('set')->distinct()->orderByDesc('set')->pluck('set')->filter()->values(),
+            'levels' => fn () => Exam::query()->select('level')->distinct()->pluck('level')->filter()->map(fn (string $level): string => Str::lower($level))->unique()->sort()->values(),
         ]);
     }
 
@@ -52,30 +88,20 @@ class ExamController extends Controller
         ]);
     }
 
-    public function addPost(Request $request)
+    public function addPost(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $validate = Validator::make($request->all(), [
-            'department_id' => 'required',
-            'title' => 'required',
-            'set' => 'required',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'level' => 'required',
+        $input = $request->validate([
+            'department_id' => ['required', 'integer', 'exists:departments,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
+            'set' => ['required', 'string', 'max:30'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+            'level' => ['required', 'string', 'max:20'],
         ]);
+        Exam::create([...$input, 'uuid' => Str::uuid()]);
 
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
-        $input = $request->input();
-        $input['uuid'] = Str::uuid();
-
-        Exam::create($input);
-
-        return redirect()
-            ->route('exam')
-            ->with('success', 'Exam created successfully.');
+        return to_route('exam')->with('success', 'Exam created successfully.');
     }
 
     public function edit(string $uuid)
@@ -89,28 +115,23 @@ class ExamController extends Controller
         ]);
     }
 
-    public function editPost(Request $request)
+    public function editPost(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $validate = Validator::make($request->all(), [
-            'department_id' => 'required',
-            'title' => 'required',
-            'set' => 'required',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
+        $input = $request->validate([
+            'id' => ['required', 'integer'],
+            'department_id' => ['required', 'integer', 'exists:departments,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
+            'set' => ['required', 'string', 'max:30'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+            'level' => ['sometimes', 'required', 'string', 'max:20'],
         ]);
-
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
-        }
-
-        $input = $request->input();
         $exam = Exam::findOrFail($input['id']);
+        unset($input['id']);
         $exam->update($input);
 
-        return redirect()
-            ->route('exam')
-            ->with('success', 'Exam updated successfully.');
+        return to_route('exam', ['search' => $exam->title])->with('success', 'Exam updated successfully.');
     }
 
     public function view(string $uuid)

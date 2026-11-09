@@ -2,7 +2,7 @@
     import { Form } from "@inertiajs/svelte";
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
 
-    let { departments } = $props();
+    let { departments, errors = {} } = $props();
 
     const startYear = 2024;
     const currentYear = new Date().getFullYear();
@@ -17,15 +17,17 @@
         <div class="w-full max-w-xl card bg-base-100">
             <div class="card-body">
                 <Form
-                    class="w-full grid grid-cols-2 gap-4"
+                    class="w-full grid grid-cols-1 sm:grid-cols-2 gap-4"
                     action="/dashboard/exam/add"
                     method="POST"
+                    disableWhileProcessing
                 >
+                    {#each Object.values(errors) as error}<p class="text-sm text-error sm:col-span-2" role="alert">{error}</p>{/each}
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Semester</legend>
                         <input
                             type="text"
-                            class="input"
+                            class="input w-full"
                             name="title"
                             placeholder="First semester exam"
                         />
@@ -34,14 +36,14 @@
                         <legend class="fieldset-legend">Session</legend>
                         <input
                             type="text"
-                            class="input"
+                            class="input w-full"
                             name="subtitle"
                             placeholder="2025/2026"
                         />
                     </fieldset>
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Department</legend>
-                        <select class="select" name="department_id">
+                        <select class="select w-full" name="department_id">
                             <option value="" disabled selected
                                 >Pick a department</option
                             >
@@ -52,7 +54,7 @@
                     </fieldset>
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Set</legend>
-                        <select class="select" name="set">
+                        <select class="select w-full" name="set">
                             <option value="" disabled selected
                                 >Pick a set</option
                             >
@@ -65,13 +67,13 @@
                     </fieldset>
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Start Date</legend>
-                        <input type="date" class="input" name="start_date" />
+                        <input type="date" class="input w-full" name="start_date" />
                     </fieldset>
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">End Date</legend>
-                        <input type="date" class="input" name="end_date" />
+                        <input type="date" class="input w-full" name="end_date" />
                     </fieldset>
-                    <fieldset class="fieldset col-span-2 w-full">
+                    <fieldset class="fieldset sm:col-span-2 w-full">
                         <legend class="fieldset-legend">Level</legend>
                         <select class="select w-full" name="level">
                             <option value="" disabled selected
@@ -83,7 +85,7 @@
                             <option value="hnd2">HND2</option>
                         </select>
                     </fieldset>
-                    <div class="col-span-2 w-full flex justify-center">
+                    <div class="sm:col-span-2 w-full flex justify-center">
                         <div class="max-w-sm w-full">
                             <button class="btn btn-block btn-primary"
                                 >Add Exam</button
