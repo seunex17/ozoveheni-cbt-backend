@@ -15,7 +15,8 @@ class ExamHallUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
     public function __construct(
         public string $operation,
         public ?int $attempt_id = null,
-        public array $progress = [],
+        public ?array $participant = null,
+        public string $occurred_at = '',
     ) {}
 
     public function broadcastOn(): PrivateChannel

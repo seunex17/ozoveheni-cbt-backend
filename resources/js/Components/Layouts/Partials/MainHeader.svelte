@@ -22,7 +22,7 @@
     <details class="dropdown dropdown-end">
         <summary class="btn btn-sm gap-2 border-base-300 bg-base-100 font-medium shadow-none">
             <DoorOpen size={16} /><span class="hidden sm:inline">Exam hall</span>
-            <span class="badge badge-sm badge-ghost tabular-nums">{#if hallState.loaded}<NumberFlow value={hallState.participants.length} />{:else}—{/if}</span>
+            <span class="badge badge-sm badge-ghost tabular-nums">{#if hallState.loaded}<NumberFlow value={hallState.participants.filter((row) => row.status === "ongoing").length} />{:else}—{/if}</span>
             <ChevronDown size={13} />
         </summary>
         <ul class="dropdown-content menu z-50 mt-3 w-56 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">

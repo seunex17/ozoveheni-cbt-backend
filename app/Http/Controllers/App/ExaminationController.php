@@ -141,7 +141,7 @@ class ExaminationController extends Controller
     {
         return DB::transaction(function () use ($attempt, $token): JsonResponse {
             $attempt = Attempt::lockForUpdate()->findOrFail($attempt->id);
-            $hallToken = $this->hallToken($attempt);
+            $this->registerInHall($attempt);
 
             return response()->json([
                 'type' => 'start',
@@ -149,27 +149,24 @@ class ExaminationController extends Controller
                 'attempt_id' => $attempt->id,
                 'attempt_token' => $token,
                 'attempt_status' => $attempt->status,
-                'hall_token' => $hallToken,
-                'heartbeat_interval_seconds' => ExamHallMonitor::HEARTBEAT_SECONDS,
+                'hall_token' => null,
+                'heartbeat_interval_seconds' => null,
+                'hall_heartbeat_required' => false,
                 'receipt' => $attempt->status === 'completed' ? $this->session->receipt($attempt) : null,
                 ...$this->session->timing($attempt),
             ])->header('Cache-Control', 'no-store, private');
         });
     }
 
-    private function hallToken(Attempt $attempt): ?string
+    private function registerInHall(Attempt $attempt): void
     {
-        if ($attempt->status === 'completed') {
-            return null;
+        if ($attempt->status === 'completed' || $attempt->submitted_at !== null) {
+            return;
         }
-        $token = Str::random(64);
-        ExamHall::updateOrCreate(['attempt_id' => $attempt->id], [
-            'student_id' => $attempt->student_id,
-            'monitor_token_hash' => hash('sha256', $token),
-        ]);
-        app(ExamHallMonitor::class)->publish('refresh');
-
-        return $token;
+        $hall = ExamHall::firstOrCreate(['attempt_id' => $attempt->id], ['student_id' => $attempt->student_id]);
+        if ($hall->wasRecentlyCreated) {
+            app(ExamHallMonitor::class)->publish('upsert', $attempt->id);
+        }
     }
 
     public function attemptStatus(Request $request, int $attempt): JsonResponse
@@ -191,8 +188,10 @@ class ExaminationController extends Controller
             $payload['student'] = $attempt->student;
             $payload['singleExam'] = $attempt->singleExam()->with(['course', 'exam'])->firstOrFail();
             $payload['questions'] = $attempt->status === 'completed' ? [] : $this->session->questions($attempt);
-            $payload['hall_token'] = $this->hallToken($attempt);
-            $payload['heartbeat_interval_seconds'] = ExamHallMonitor::HEARTBEAT_SECONDS;
+            $this->registerInHall($attempt);
+            $payload['hall_token'] = null;
+            $payload['heartbeat_interval_seconds'] = null;
+            $payload['hall_heartbeat_required'] = false;
 
             return response()->json($payload)->header('Cache-Control', 'no-store, private');
         });
@@ -295,7 +294,7 @@ class ExaminationController extends Controller
                 'submission_id' => $input['submission_id'] ?? (string) Str::uuid(),
                 'submission_payload_hash' => $payloadHash,
             ]);
-            app(ExamHallMonitor::class)->publish('remove', $attempt->id);
+            app(ExamHallMonitor::class)->publish('upsert', $attempt->id);
 
             return $this->session->receipt($attempt);
         });

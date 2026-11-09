@@ -241,14 +241,19 @@ test('equivalent UUID casing recovers the same attempt and repeated receipt', fu
     $this->postJson('/api/submit-exam', [...$payload, 'submission_id' => strtoupper($id)])->assertOk()->assertExactJson($receipt);
 });
 
-test('live question telemetry must match the persisted allocation and displayed ordinal', function () {
+test('protected real exams no longer require question telemetry', function () {
     $this->travelTo(now()->startOfDay()->addHours(10));
     $fixture = realExamFixture();
     $session = startRealExam($this, $fixture);
     $payload = ['attempt_id' => $session['attempt_id'], 'sequence' => 1, 'current_question_id' => $fixture['question']->id, 'current_question_number' => 1, 'total_questions' => 1];
-    $this->withToken($session['hall_token'])->postJson('/api/exam-hall/heartbeat', $payload)->assertOk();
-    $this->postJson('/api/exam-hall/heartbeat', [...$payload, 'sequence' => 2, 'total_questions' => 2])->assertUnprocessable();
-    $this->assertDatabaseHas('exam_halls', ['attempt_id' => $session['attempt_id'], 'last_sequence' => 1]);
+    $this->postJson('/api/exam-hall/heartbeat', $payload)->assertGone();
+    expect($session['hall_token'])->toBeNull();
+    expect($session['hall_heartbeat_required'])->toBeFalse();
+    \Illuminate\Support\Facades\Event::fake([\App\Events\ExamHallUpdated::class]);
+    $this->postJson('/api/student-login', $fixture['login'])->assertOk();
+    \Illuminate\Support\Facades\Event::assertNotDispatched(\App\Events\ExamHallUpdated::class);
+    $this->postJson('/api/exam-hall/heartbeat', [...$payload, 'sequence' => 2, 'total_questions' => 2])->assertGone();
+    $this->assertDatabaseHas('exam_halls', ['attempt_id' => $session['attempt_id'], 'last_sequence' => 0]);
 });
 
 test('noncanonical question keys cannot create duplicate answer rows or inflate marks', function () {

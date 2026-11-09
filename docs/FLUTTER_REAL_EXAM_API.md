@@ -21,12 +21,12 @@ Use the deployment's configured API base ending in `/api/`. The LAN hosts/ports 
 
 For Flutter attempts, send `Authorization: Bearer <attempt_token>` on load, save, submit, resume and status requests. Changing request fields to `client: legacy` cannot bypass protection on an existing protected attempt.
 
-Two credentials have separate purposes:
+Exam credentials and retired compatibility fields:
 
 | Credential | Purpose |
 | --- | --- |
 | `attempt_token` | Exam paper, answers, resume/status and submission for one Flutter attempt. |
-| `hall_token` | Only live-hall heartbeat/progress reporting. It is not an exam API token. |
+| `hall_token` | Retired compatibility field, always null. Flutter must not start hall reporting. |
 
 Never put these credentials in URLs or logs. Keep them in platform-appropriate secure storage. The original registration-only identification at first admission still does not prove the person's identity; this change protects the resulting attempt and its recovery credentials. Preserve the school's identity-verification process. Legacy attempts remain less protected during the controlled rollout.
 
@@ -55,8 +55,9 @@ Successful response, abbreviated:
   "attempt_id": 123,
   "attempt_token": "<opaque attempt credential>",
   "attempt_status": "in_progress",
-  "hall_token": "<separate monitoring credential>",
-  "heartbeat_interval_seconds": 20,
+  "hall_token": null,
+  "heartbeat_interval_seconds": null,
+  "hall_heartbeat_required": false,
   "started_at": null,
   "expires_at": null,
   "remaining_seconds": null,
@@ -223,7 +224,7 @@ Authorization: Bearer <attempt_token>
 
 Returns the status payload plus `student`, `singleExam`, `questions`, `hall_token` and `heartbeat_interval_seconds`. Started attempts retain the saved order and deadline. Before first paper load, questions are empty and timing remains null: call load-questions when ready. Completed attempts return an empty question list, null hall token and the receipt; do not reopen editing.
 
-Login recovery and resume rotate the hall token for an open attempt; replace the stored monitoring credential. The exam attempt token stays the same. Hall heartbeat sequences do not reset on token rotation: retain your local sequence, and advance above the server's `last_sequence` if a heartbeat reports an older/duplicate sequence.
+Hall status now comes from existing login and submission requests. `hall_token` and `heartbeat_interval_seconds` are null and `hall_heartbeat_required` is false. Remove all telemetry timers, progress requests and telemetry sequence storage from Flutter; no replacement status heartbeat is needed.
 
 Both status/resume require an attempt token and do not expose legacy unprotected attempts. Saved answers are authoritative for acknowledged server state. Merge only known unsynchronized local edits from the same server/student/attempt journal, never overwrite server state blindly, and preserve explicit clears.
 
@@ -243,7 +244,7 @@ Both status/resume require an attempt token and do not expose legacy unprotected
 | HTTP 422 | Invalid fields, missing UUID/final answers, or question/option outside allocation. Fix the payload. |
 | Timeout/network/HTTP 5xx | Keep the frozen journal and credentials; reconcile/retry without false completion. |
 
-Do not clear drafts merely because a timer expires, a heartbeat succeeds, or a hall command arrives. Keep submitted evidence until the completion receipt is durable locally and the school's cleanup policy allows deletion. Do not embed the Reverb app secret. Optional monitoring is documented in [FLUTTER_LIVE_EXAM_HALL.md](FLUTTER_LIVE_EXAM_HALL.md); telemetry must not block answers/submission.
+Do not clear drafts merely because a timer expires, a heartbeat succeeds, or a hall command arrives. Keep submitted evidence until the completion receipt is durable locally and the school's cleanup policy allows deletion. Do not embed the Reverb app secret. The simplified status-only hall is documented in [FLUTTER_LIVE_EXAM_HALL.md](FLUTTER_LIVE_EXAM_HALL.md); it requires no Flutter telemetry requests.
 
 ## Deployment and acceptance
 
@@ -258,7 +259,7 @@ Rollback requires coordinating the Flutter rollout, restoring the previous appli
 
 ## Local verification for this handoff
 
-- Full Laravel suite: 58 tests pass with 322 assertions, including 21 new real-exam session cases.
+- Full Laravel suite: 58 tests pass with 327 assertions, including real-exam recovery and submission coverage. The earlier question-telemetry assertions have been updated for the retired endpoint.
 - Existing exam-client and live-hall tests continue to pass.
 - Route caching and API route discovery pass; generated route cache was cleared after checking.
 - Pint formatting and diff whitespace checks pass.

@@ -45,62 +45,52 @@ function hallLogin($test): array
     $fixture = hallExamFixture();
     $response = $test->postJson('/api/student-login', ['reg_no' => $fixture['student']->reg_no])->assertOk()->assertJsonPath('type', 'start');
 
-    return [...$fixture, 'attempt' => Attempt::findOrFail($response->json('attempt_id')), 'token' => $response->json('hall_token')];
+    return [...$fixture, 'attempt' => Attempt::findOrFail($response->json('attempt_id')), 'login_response' => $response->json()];
 }
 
-test('login issues a hashed attempt specific hall token and publishes the roster change', function () {
+test('login publishes an ongoing profile without issuing heartbeat credentials', function () {
     Event::fake([ExamHallUpdated::class, ExamHallEvent::class]);
     $fixture = hallLogin($this);
-
-    expect($fixture['token'])->toHaveLength(64);
-    $this->assertDatabaseHas('exam_halls', ['attempt_id' => $fixture['attempt']->id, 'monitor_token_hash' => hash('sha256', $fixture['token'])]);
-    expect(ExamHall::first()->toArray())->not->toHaveKey('monitor_token_hash');
-    Event::assertDispatched(ExamHallUpdated::class, fn ($event) => $event->operation === 'refresh');
+    expect($fixture['login_response']['hall_token'])->toBeNull();
+    expect($fixture['login_response']['hall_heartbeat_required'])->toBeFalse();
+    $this->assertDatabaseHas('exam_halls', ['attempt_id' => $fixture['attempt']->id, 'monitor_token_hash' => null]);
+    Event::assertDispatched(ExamHallUpdated::class, fn ($event) => $event->operation === 'upsert'
+        && $event->participant['status'] === 'ongoing'
+        && $event->participant['student']['name'] === 'Ada Test Student'
+        && $event->broadcastOn()->name === 'private-exam-hall.monitor');
     Event::assertDispatched(ExamHallEvent::class, fn ($event) => $event->totalStudent === 1);
 });
 
-test('heartbeat saves the reported position and older requests cannot replace it', function () {
-    $this->freezeTime();
+test('retired heartbeat performs no database queries writes or broadcasts', function () {
     $fixture = hallLogin($this);
     Event::fake([ExamHallUpdated::class]);
-    $payload = [
-        'attempt_id' => $fixture['attempt']->id, 'sequence' => 2,
-        'current_question_id' => $fixture['question']->id,
-        'current_question_number' => 1, 'total_questions' => 1,
-    ];
-
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', $payload)
-        ->assertOk()->assertJsonPath('accepted', true)->assertJsonPath('last_sequence', 2);
-    $seen = ExamHall::first()->last_seen_at;
-    $this->travel(70)->seconds();
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', [
-        'attempt_id' => $fixture['attempt']->id, 'sequence' => 1,
-    ])->assertOk()->assertJsonPath('accepted', false)->assertJsonPath('last_sequence', 2);
-
-    $this->assertDatabaseHas('exam_halls', ['attempt_id' => $fixture['attempt']->id, 'current_question_number' => 1, 'last_sequence' => 2]);
-    expect(ExamHall::first()->last_seen_at->equalTo($seen))->toBeTrue();
-    Event::assertDispatchedTimes(ExamHallUpdated::class, 1);
-    Event::assertDispatched(ExamHallUpdated::class, fn ($event) => $event->operation === 'progress' && $event->progress['current_question_number'] === 1 && $event->broadcastOn()->name === 'private-exam-hall.monitor');
-});
-
-test('heartbeat returns 401 without the attempt token and does not change another student', function () {
-    $fixture = hallLogin($this);
-    $this->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $fixture['attempt']->id, 'sequence' => 1])->assertUnauthorized();
-    $this->withToken('wrong-token')->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $fixture['attempt']->id, 'sequence' => 1])->assertUnauthorized();
-    $other = Attempt::create(['student_id' => $fixture['student']->id, 'single_exam_id' => $fixture['paper']->id]);
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $other->id, 'sequence' => 1])->assertUnauthorized();
+    \Illuminate\Support\Facades\DB::enableQueryLog();
+    try {
+        $this->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $fixture['attempt']->id, 'sequence' => 2])
+            ->assertGone()->assertJsonPath('code', 'HALL_HEARTBEAT_RETIRED')->assertJsonPath('heartbeat_required', false);
+        expect(\Illuminate\Support\Facades\DB::getQueryLog())->toBe([]);
+    } finally {
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+    }
     $this->assertDatabaseHas('exam_halls', ['attempt_id' => $fixture['attempt']->id, 'last_sequence' => 0, 'last_seen_at' => null]);
+    Event::assertNotDispatched(ExamHallUpdated::class);
 });
 
-test('heartbeat returns 422 for invalid positions or questions outside the paper', function (array $overrides) {
+test('retired heartbeat reveals no attempt details for missing or incorrect credentials', function () {
+    $fixture = hallLogin($this);
+    $this->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $fixture['attempt']->id])->assertGone();
+    $this->withToken('wrong-token')->postJson('/api/exam-hall/heartbeat', ['attempt_id' => 99999])->assertGone()->assertJsonMissingPath('student');
+    $this->assertDatabaseHas('exam_halls', ['attempt_id' => $fixture['attempt']->id, 'last_seen_at' => null]);
+});
+
+test('retired question payloads consistently tell old clients to stop rather than retry validation', function (array $overrides) {
     $fixture = hallLogin($this);
     Event::fake([ExamHallUpdated::class]);
     $payload = array_replace([
         'attempt_id' => $fixture['attempt']->id, 'sequence' => 1,
         'current_question_id' => $fixture['question']->id, 'current_question_number' => 1, 'total_questions' => 1,
     ], $overrides);
-
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', $payload)->assertUnprocessable();
+    $this->postJson('/api/exam-hall/heartbeat', $payload)->assertGone()->assertJsonPath('heartbeat_required', false);
     $this->assertDatabaseHas('exam_halls', ['attempt_id' => $fixture['attempt']->id, 'last_sequence' => 0]);
     Event::assertNotDispatched(ExamHallUpdated::class);
 })->with([
@@ -112,28 +102,26 @@ test('heartbeat returns 422 for invalid positions or questions outside the paper
     'incomplete progress' => [['current_question_id' => null]],
 ]);
 
-test('a heartbeat without a question refreshes presence without inventing progress', function () {
+test('presence only heartbeats are retired and do not invent connection freshness', function () {
     $fixture = hallLogin($this);
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $fixture['attempt']->id, 'sequence' => 1])->assertOk()->assertJsonPath('accepted', true);
-    expect(ExamHall::first()->last_seen_at)->not->toBeNull();
-    expect(ExamHall::first()->current_question_number)->toBeNull();
+    $this->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $fixture['attempt']->id, 'sequence' => 1])->assertGone();
+    expect(ExamHall::first()->last_seen_at)->toBeNull();
 });
 
-test('staff snapshot exposes profiles and progress but excludes completed attempts and secrets', function () {
+test('staff snapshot retains submitted students but exposes only identity and examination status', function () {
     $fixture = hallLogin($this);
     $completed = Attempt::create(['student_id' => $fixture['student']->id, 'single_exam_id' => $fixture['paper']->id, 'status' => 'completed', 'submitted_at' => now()]);
     ExamHall::create(['attempt_id' => $completed->id, 'student_id' => $fixture['student']->id]);
     $staff = User::factory()->create(['status' => 'active', 'is_admin' => false]);
-
     $this->actingAs($staff)->get('/dashboard/exam-hall')->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page->component('Dashboard/ExamHall/Index'));
-    $this->getJson('/dashboard/exam-hall/snapshot')->assertOk()->assertJsonPath('count', 1)
+    $this->getJson('/dashboard/exam-hall/snapshot')->assertOk()->assertJsonCount(2, 'participants')
+        ->assertJsonPath('count', 1)->assertJsonPath('submitted_count', 1)
         ->assertJsonPath('participants.0.student.name', 'Ada Test Student')
-        ->assertJsonPath('participants.0.current_question_number', null)
-        ->assertJsonPath('participants.0.last_seen_at', null)
-        ->assertJsonPath('participants.0.exam.code', 'CHS101')
-        ->assertJsonMissingPath('participants.0.monitor_token_hash')
-        ->assertDontSee($fixture['token'])->assertHeader('Cache-Control', 'no-store, private');
+        ->assertJsonPath('participants.0.status', 'ongoing')->assertJsonPath('participants.1.status', 'submitted')
+        ->assertJsonMissingPath('participants.0.current_question_number')->assertJsonMissingPath('participants.0.last_seen_at')
+        ->assertJsonMissingPath('participants.0.monitor_token_hash')->assertJsonMissingPath('participants.0.exam')
+        ->assertHeader('Cache-Control', 'no-store, private');
 });
 
 test('guest and inactive staff cannot read the hall roster', function () {
@@ -154,45 +142,34 @@ test('private monitor channel refuses guests and inactive staff but accepts acti
     $this->actingAs($active)->postJson('/broadcasting/auth', $payload)->assertOk()->assertJsonStructure(['auth']);
 });
 
-test('submission removes the student from the roster and rejects delayed heartbeats with 409', function () {
+test('submission keeps the student visible with a submitted badge and retries do not broadcast again', function () {
     $fixture = hallLogin($this);
     Event::fake([ExamHallUpdated::class, ExamHallEvent::class]);
     $this->postJson('/api/submit-exam', ['attempt_id' => $fixture['attempt']->id])->assertOk();
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $fixture['attempt']->id, 'sequence' => 1])->assertConflict();
+    $this->postJson('/api/submit-exam', ['attempt_id' => $fixture['attempt']->id])->assertOk();
     $staff = User::factory()->create(['status' => 'active']);
-    $this->actingAs($staff)->getJson('/dashboard/exam-hall/snapshot')->assertOk()->assertJsonPath('count', 0);
-    Event::assertDispatched(ExamHallUpdated::class, fn ($event) => $event->operation === 'remove' && $event->attempt_id === $fixture['attempt']->id);
+    $this->actingAs($staff)->getJson('/dashboard/exam-hall/snapshot')->assertOk()->assertJsonPath('count', 0)
+        ->assertJsonPath('submitted_count', 1)->assertJsonPath('participants.0.status', 'submitted');
+    Event::assertDispatchedTimes(ExamHallUpdated::class, 1);
+    Event::assertDispatched(ExamHallUpdated::class, fn ($event) => $event->operation === 'upsert' && $event->participant['status'] === 'submitted');
     Event::assertDispatched(ExamHallEvent::class, fn ($event) => $event->totalStudent === 0);
 });
 
-test('sweeping the hall revokes telemetry tokens and publishes a reset', function () {
+test('sweeping clears ongoing and submitted cards and publishes a reset', function () {
     $fixture = hallLogin($this);
     Event::fake([ExamHallUpdated::class]);
     $staff = User::factory()->create(['status' => 'active']);
     $this->actingAs($staff)->post('/dashboard/sweep-exam-hall')->assertRedirect();
     $this->assertDatabaseCount('exam_halls', 0);
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', ['attempt_id' => $fixture['attempt']->id, 'sequence' => 2])->assertUnauthorized();
     Event::assertDispatched(ExamHallUpdated::class, fn ($event) => $event->operation === 'reset');
 });
 
-test('presence refresh preserves the current question and ignores client supplied identity and timestamps', function () {
-    $this->travelTo(now()->startOfSecond());
+test('answer saving does not generate repeated hall broadcasts', function () {
     $fixture = hallLogin($this);
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', [
-        'attempt_id' => $fixture['attempt']->id, 'sequence' => 1,
-        'current_question_id' => $fixture['question']->id, 'current_question_number' => 1, 'total_questions' => 1,
-    ])->assertOk();
-    $this->travel(75)->seconds();
-    $this->withToken($fixture['token'])->postJson('/api/exam-hall/heartbeat', [
-        'attempt_id' => $fixture['attempt']->id, 'sequence' => 2,
-        'student_id' => 999, 'last_seen_at' => '2099-01-01T00:00:00Z',
-    ])->assertOk()->assertJsonPath('accepted', true);
-
-    $this->assertDatabaseHas('exam_halls', [
-        'attempt_id' => $fixture['attempt']->id, 'student_id' => $fixture['student']->id,
-        'current_question_number' => 1, 'last_sequence' => 2,
-    ]);
-    expect(ExamHall::first()->last_seen_at->equalTo(now()))->toBeTrue();
-    $this->assertDatabaseCount('answers', 0);
-    $this->assertDatabaseCount('reports', 0);
+    $option = \App\Models\QuestionOption::create(['question_id' => $fixture['question']->id, 'option_text' => 'A', 'is_correct' => true]);
+    Event::fake([ExamHallUpdated::class]);
+    $payload = ['attempt_id' => $fixture['attempt']->id, 'answers' => [$fixture['question']->id => $option->id]];
+    $this->postJson('/api/save-answers', $payload)->assertOk();
+    $this->postJson('/api/save-answers', $payload)->assertOk();
+    Event::assertNotDispatched(ExamHallUpdated::class);
 });
