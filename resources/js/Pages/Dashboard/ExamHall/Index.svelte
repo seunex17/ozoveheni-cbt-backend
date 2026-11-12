@@ -5,7 +5,7 @@
 
     let search = $state("");
     let filter = $state("all");
-    let failedPhotos = $state<Record<number, boolean>>({});
+    let failedPhotos = $state<Record<number, string>>({});
     const ongoing = $derived(hallState.participants.filter((row) => row.status === "ongoing").length);
     const submitted = $derived(hallState.participants.filter((row) => row.status === "submitted").length);
     const visible = $derived(hallState.participants.filter((row) => {
@@ -54,8 +54,8 @@
                         <div class="card-body gap-4 p-5">
                             <div class="flex items-center gap-4">
                                 <div class="avatar avatar-placeholder shrink-0"><div class="h-20 w-20 rounded-xl bg-base-200 text-base-content/50">
-                                    {#if row.student.photo_url && !failedPhotos[row.attempt_id]}
-                                        <img src={row.student.photo_url} alt={row.student.name} loading="lazy" class="object-cover" onerror={() => failedPhotos[row.attempt_id] = true} />
+                                    {#if row.student.photo_url && failedPhotos[row.attempt_id] !== row.student.photo_url}
+                                        <img src={row.student.photo_url} alt={row.student.name} loading="lazy" class="object-cover" onerror={() => failedPhotos[row.attempt_id] = row.student.photo_url!} />
                                     {:else}<span class="text-xl font-medium" aria-label="No passport photo">{row.student.name.split(" ").filter(Boolean).slice(0, 2).map((name) => name[0]).join("")}</span>{/if}
                                 </div></div>
                                 <div class="min-w-0 grow"><h2 class="text-sm font-semibold leading-5">{row.student.name}</h2><p class="mt-1 break-all text-xs text-base-content/55">{row.student.reg_no}</p>

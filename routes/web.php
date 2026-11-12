@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Dashboard\AttemptController;
 use App\Http\Controllers\Dashboard\CourseController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
@@ -102,6 +103,12 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::post('/refresh-reports', [ExamController::class, 'refreshReports'])->name('exam.refreshReports');
         Route::post('/update=report', [ExamController::class, 'updateReport'])->name('exam.updateReports');
         Route::post('/import-questions', [ExamController::class, 'importQuestions'])->name('exam.importQuestions');
+    });
+
+    Route::prefix('/attempts')->middleware([IsAdminMiddleware::class])->group(function () {
+        Route::get('/', [AttemptController::class, 'index'])->name('attempts');
+        Route::post('/{exam:uuid}/students/{student:uuid}/clear', [AttemptController::class, 'clearStudent'])->withoutScopedBindings()->name('attempts.clearStudent');
+        Route::post('/{exam:uuid}/clear', [AttemptController::class, 'clearExam'])->name('attempts.clearExam');
     });
 
     // Exam Vouchers

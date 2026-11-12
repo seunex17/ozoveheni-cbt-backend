@@ -275,3 +275,56 @@ test('staff cannot configure a fractional zero or negative examination duration'
     ])->assertRedirect()->assertSessionHas('error');
     $this->assertDatabaseCount('single_exams', 0);
 })->with([0, -1, 1.5]);
+
+test('a cleared attempt returns a recoverable error instead of a model exception', function (string $endpoint) {
+    $this->travelTo(now()->startOfDay()->addHours(10));
+    $fixture = realExamFixture();
+    $session = startRealExam($this, $fixture);
+    Attempt::findOrFail($session['attempt_id'])->delete();
+    $this->withToken($session['attempt_token']);
+    $response = match ($endpoint) {
+        'load' => $this->getJson($session['url']),
+        'status' => $this->getJson('/api/attempt-status/'.$session['attempt_id']),
+        'resume' => $this->postJson('/api/resume-exam', ['attempt_id' => $session['attempt_id']]),
+        'save' => $this->postJson('/api/save-answers', ['attempt_id' => $session['attempt_id'], 'answers' => []]),
+        'submit' => $this->postJson('/api/submit-exam', ['attempt_id' => $session['attempt_id'], 'answers' => [], 'submission_id' => (string) str()->uuid()]),
+    };
+    $response->assertNotFound()->assertExactJson([
+        'success' => false,
+        'code' => 'ATTEMPT_NOT_FOUND',
+        'message' => 'This exam attempt is no longer available. Return to student sign-in to start a new attempt.',
+    ]);
+    $this->assertDatabaseCount('attempts', 0);
+    $this->assertDatabaseCount('answers', 0);
+})->with(['load', 'status', 'resume', 'save', 'submit']);
+
+test('fresh student sign-in after clearing creates a new attempt with a full timer and rejects old credentials', function () {
+    $this->travelTo(now()->startOfDay()->addHours(10));
+    $fixture = realExamFixture();
+    $old = startRealExam($this, $fixture);
+    Attempt::findOrFail($old['attempt_id'])->delete();
+    $fixture['login']['login_id'] = (string) str()->uuid();
+    $fresh = startRealExam($this, $fixture);
+    expect($fresh['attempt_id'])->not->toBe($old['attempt_id']);
+    expect($fresh['attempt_token'])->not->toBe($old['attempt_token']);
+    expect($fresh['loaded']['remaining_seconds'])->toBe(2400);
+    expect($fresh['loaded']['answers'])->toBe([]);
+    $this->withToken($old['attempt_token'])->postJson('/api/resume-exam', ['attempt_id' => $fresh['attempt_id']])->assertUnauthorized();
+    $this->assertDatabaseCount('attempts', 1);
+});
+
+test('student login recovery and resume include the department name alongside its existing id', function () {
+    $this->travelTo(now()->startOfDay()->addHours(10));
+    $fixture = realExamFixture();
+    $login = $this->postJson('/api/student-login', $fixture['login'])->assertOk()
+        ->assertJsonPath('student.department_id', $fixture['department']->id)
+        ->assertJsonPath('student.department.id', $fixture['department']->id)
+        ->assertJsonPath('student.department.name', 'Test department')->json();
+    $this->postJson('/api/student-login', $fixture['login'])->assertOk()
+        ->assertJsonPath('attempt_id', $login['attempt_id'])
+        ->assertJsonPath('student.department.name', 'Test department');
+    $fixture['department']->update(['name' => 'Community Health']);
+    $this->withToken($login['attempt_token'])->postJson('/api/resume-exam', ['attempt_id' => $login['attempt_id']])->assertOk()
+        ->assertJsonPath('student.department_id', $fixture['department']->id)
+        ->assertJsonPath('student.department.name', 'Community Health');
+});

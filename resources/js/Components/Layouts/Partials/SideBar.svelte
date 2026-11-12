@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Link, page } from "@inertiajs/svelte";
-    import { BookA, Folder, GraduationCap, LayoutDashboard, Notebook, DoorOpen, Ticket, Printer, Users, ShieldCheck } from "lucide-svelte";
+    import { BookA, Folder, GraduationCap, LayoutDashboard, Notebook, DoorOpen, Ticket, Printer, Users, ShieldCheck, RotateCcw } from "lucide-svelte";
 
     let { onNavigate = () => {} } = $props();
     const currentPath = $derived($page.url.split("?")[0]);
@@ -15,6 +15,7 @@
         { label: "Examinations", links: [
             { name: "Live exam hall", route: "/dashboard/exam-hall", icon: DoorOpen },
             { name: "Manage exams", route: "/dashboard/exam", icon: Notebook },
+            { name: "Manage attempts", route: "/dashboard/attempts", icon: RotateCcw },
             { name: "Exam vouchers", route: "/dashboard/voucher", icon: Ticket },
             { name: "Print results", route: "/dashboard/print/result", icon: Printer },
         ] },

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { InfiniteScroll, Link } from "@inertiajs/svelte";
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
-    import { Plus, FileText, Sheet, ArrowRight } from "lucide-svelte";
+    import { Plus, FileText, Sheet, ArrowRight, RotateCcw } from "lucide-svelte";
     let { exam, singleExams } = $props();
     const dateTime = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" });
     const formatDate = (value: string) => value && !Number.isNaN(Date.parse(value)) ? dateTime.format(new Date(value)) : "Not scheduled";
@@ -10,6 +10,7 @@
 <DashboardLayout title={exam.title} description={`Course papers · ${exam.set} · ${exam.level?.toUpperCase() ?? ""}`}>
     {#snippet actions()}
         <Link href="/dashboard/exam" class="btn btn-ghost btn-sm">All examinations</Link>
+        <Link href={`/dashboard/attempts?exam=${exam.uuid}`} class="btn gap-2"><RotateCcw size={16} /> Attempts</Link>
         <Link href={`/dashboard/exam/${exam.uuid}/reports`} class="btn gap-2"><FileText size={16} /> Reports</Link>
         <Link href={`/dashboard/exam/${exam.uuid}/broadsheet`} class="btn gap-2"><Sheet size={16} /> Broadsheet</Link>
         <Link href={`/dashboard/exam/${exam.uuid}/set-new-exam`} class="btn btn-primary gap-2"><Plus size={16} /> Add course paper</Link>

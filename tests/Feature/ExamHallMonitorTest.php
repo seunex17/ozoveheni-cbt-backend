@@ -173,3 +173,24 @@ test('answer saving does not generate repeated hall broadcasts', function () {
     $this->postJson('/api/save-answers', $payload)->assertOk();
     Event::assertNotDispatched(ExamHallUpdated::class);
 });
+
+test('hall passport urls use the dashboard origin for local storage even when the configured host differs', function () {
+    config(['filesystems.disks.public.url' => 'http://localhost/storage']);
+    $fixture = hallLogin($this);
+    $staff = User::factory()->create(['status' => 'active']);
+    $this->actingAs($staff)->getJson('/dashboard/exam-hall/snapshot')->assertOk()
+        ->assertJsonPath('participants.0.student.photo_url', '/storage/students/ada.jpg');
+    $fixture['student']->update(['photo' => null]);
+    $this->getJson('/dashboard/exam-hall/snapshot')->assertOk()
+        ->assertJsonPath('participants.0.student.photo_url', null);
+});
+
+test('hall passport urls preserve remote public disk urls', function () {
+    $fixture = hallLogin($this);
+    config(['filesystems.disks.public.driver' => 's3']);
+    \Illuminate\Support\Facades\Storage::shouldReceive('disk')->once()->with('public')->andReturnSelf();
+    \Illuminate\Support\Facades\Storage::shouldReceive('url')->once()->with('students/ada.jpg')->andReturn('https://photos.example.test/students/ada.jpg');
+    $staff = User::factory()->create(['status' => 'active']);
+    $this->actingAs($staff)->getJson('/dashboard/exam-hall/snapshot')->assertOk()
+        ->assertJsonPath('participants.0.student.photo_url', 'https://photos.example.test/students/ada.jpg');
+});

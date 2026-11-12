@@ -50,10 +50,19 @@ class ExamHallMonitor
             'student' => [
                 'name' => trim(implode(' ', array_filter([$student->first_name, $student->middle_name, $student->last_name]))),
                 'reg_no' => $student->reg_no,
-                'photo_url' => $student->photo ? Storage::disk('public')->url($student->photo) : null,
+                'photo_url' => $student->photo ? $this->photoUrl($student->photo) : null,
             ],
             'status' => $attempt->status === 'completed' || $attempt->submitted_at !== null ? 'submitted' : 'ongoing',
         ];
+    }
+
+    private function photoUrl(string $path): string
+    {
+        if (config('filesystems.disks.public.driver') === 'local') {
+            return '/storage/'.ltrim($path, '/');
+        }
+
+        return Storage::disk('public')->url($path);
     }
 
     public function publish(string $operation, ?int $attemptId = null): void

@@ -45,7 +45,7 @@ class ExaminationController extends Controller
         $set = Str::replace('-', '/', $set);
 
         return DB::transaction(function () use ($request, $department, $set, $attempt): JsonResponse {
-            $examAttempt = Attempt::lockForUpdate()->findOrFail($attempt);
+            $examAttempt = $this->findAttempt($attempt, true);
             $this->session->authorize($request, $examAttempt);
             abort_if($examAttempt->status === 'completed' || $examAttempt->submitted_at !== null, 409, 'Exam already submitted.');
             $singleExam = SingleExam::with(['course', 'exam'])->findOrFail($examAttempt->single_exam_id);
@@ -62,6 +62,24 @@ class ExaminationController extends Controller
                 ...$this->session->timing($examAttempt),
             ])->header('Cache-Control', 'no-store, private');
         });
+    }
+
+    private function findAttempt(int|string $id, bool $lock = false): Attempt
+    {
+        $query = Attempt::query();
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+        $attempt = $query->find($id);
+        if (! $attempt) {
+            $this->session->fail(
+                'ATTEMPT_NOT_FOUND',
+                'This exam attempt is no longer available. Return to student sign-in to start a new attempt.',
+                404,
+            );
+        }
+
+        return $attempt;
     }
 
     public function studentLogin(Request $request): JsonResponse
@@ -140,7 +158,8 @@ class ExaminationController extends Controller
     private function loginResponse(Attempt $attempt, ?string $token): JsonResponse
     {
         return DB::transaction(function () use ($attempt, $token): JsonResponse {
-            $attempt = Attempt::lockForUpdate()->findOrFail($attempt->id);
+            $attempt = $this->findAttempt($attempt->id, true);
+            $attempt->loadMissing('student.department:id,name');
             $this->registerInHall($attempt);
 
             return response()->json([
@@ -171,7 +190,7 @@ class ExaminationController extends Controller
 
     public function attemptStatus(Request $request, int $attempt): JsonResponse
     {
-        $examAttempt = Attempt::findOrFail($attempt);
+        $examAttempt = $this->findAttempt($attempt);
         $this->session->authorize($request, $examAttempt, true);
 
         return response()->json($this->sessionState($examAttempt))->header('Cache-Control', 'no-store, private');
@@ -182,8 +201,9 @@ class ExaminationController extends Controller
         $input = $request->validate(['attempt_id' => ['required', 'integer', 'min:1']]);
 
         return DB::transaction(function () use ($input, $request): JsonResponse {
-            $attempt = Attempt::lockForUpdate()->findOrFail($input['attempt_id']);
+            $attempt = $this->findAttempt($input['attempt_id'], true);
             $this->session->authorize($request, $attempt, true);
+            $attempt->loadMissing('student.department:id,name');
             $payload = $this->sessionState($attempt);
             $payload['student'] = $attempt->student;
             $payload['singleExam'] = $attempt->singleExam()->with(['course', 'exam'])->firstOrFail();
@@ -222,7 +242,7 @@ class ExaminationController extends Controller
         ]);
 
         $completed = DB::transaction(function () use ($input, $request, $receivedAt): bool {
-            $attempt = Attempt::lockForUpdate()->findOrFail($input['attempt_id']);
+            $attempt = $this->findAttempt($input['attempt_id'], true);
             $this->session->authorize($request, $attempt);
             if ($attempt->status === 'completed' || $attempt->submitted_at !== null) {
                 if (! $this->session->unchanged($attempt, $input['answers'])) {
@@ -258,7 +278,7 @@ class ExaminationController extends Controller
         }
 
         $receipt = DB::transaction(function () use ($input, $request, $receivedAt): array {
-            $attempt = Attempt::lockForUpdate()->findOrFail($input['attempt_id']);
+            $attempt = $this->findAttempt($input['attempt_id'], true);
             $this->session->authorize($request, $attempt);
             $savedOnly = (bool) ($input['submit_saved_answers'] ?? false);
             if ($savedOnly && array_key_exists('answers', $input)) {
