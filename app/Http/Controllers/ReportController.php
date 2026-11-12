@@ -79,6 +79,8 @@ class ReportController extends Controller
         ])->render();
 
         $pdf = Browsershot::html($data)
+            ->format('A4')
+            ->showBackground()
             ->setChromePath(config('pdf.chrome_path'))
             ->setNodeBinary(config('pdf.node_binary'))
             ->setNpmBinary(config('pdf.npm_binary'))
@@ -87,6 +89,6 @@ class ReportController extends Controller
 
         return response($pdf)
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="invoice.pdf"');
+            ->header('Content-Disposition', 'inline; filename="student-result-slip.pdf"');
     }
 }
