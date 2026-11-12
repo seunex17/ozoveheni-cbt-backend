@@ -17,7 +17,7 @@
     let addModal: HTMLDialogElement;
     let editingExam = $state<any>(null);
     const addForm = useForm({ id: null as number | null, title: "", subtitle: "", department_id: "", set: "", level: "", start_date: "", end_date: "" });
-    const formLevels = $derived([...new Set(["nd1", "nd2", "hnd1", "hnd2", ...levels])]);
+    const formLevels = $derived(levels);
     function openAddExam() {
         editingExam = null;
         $addForm.reset();
@@ -117,7 +117,7 @@
                     <div><label for="exam-department" class="mb-2 block text-xs font-medium text-base-content/70">Department</label><select id="exam-department" class="select w-full" bind:value={department}><option value="">All departments</option>{#each departments as item}<option value={item.uuid}>{item.name}</option>{/each}</select></div>
                     <div><label for="exam-set" class="mb-2 block text-xs font-medium text-base-content/70">Set</label><select id="exam-set" class="select w-full" bind:value={selectedSet}><option value="">All sets</option>{#each sets as item}<option value={item}>{item}</option>{/each}</select></div>
                     <div><label for="exam-level" class="mb-2 block text-xs font-medium text-base-content/70">Level</label><select id="exam-level" class="select w-full" bind:value={level}><option value="">All levels</option>{#each levels as item}<option value={item}>{item.toUpperCase()}</option>{/each}</select></div>
-                    <div><label for="exam-status" class="mb-2 block text-xs font-medium text-base-content/70">Status</label><select id="exam-status" class="select w-full" bind:value={status}><option value="">All statuses</option><option value="pending">Pending</option><option value="active">Active</option><option value="completed">Completed</option></select></div>
+                    <div><label for="exam-status" class="mb-2 block text-xs font-medium text-base-content/70">Status</label><select id="exam-status" class="select w-full" bind:value={status}><option value="">All statuses</option><option value="pending">Pending</option><option value="active">Ongoing</option><option value="completed">Completed</option></select></div>
                 </div>
                 <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-4 text-xs text-base-content/60"><span>Choose filters, then press Search or Enter to apply.</span>{#if hasFilters}<button type="button" class="btn btn-ghost btn-xs gap-1.5" onclick={clearFilters} disabled={searching}><X size={13} /> Clear filters</button>{/if}</div>
             </form>
@@ -137,7 +137,7 @@
                                     <td class="max-w-50 whitespace-normal text-xs leading-5 text-base-content/70">{exam.department?.name ?? "—"}</td>
                                     <td class="text-xs"><div>{exam.set}</div><div class="mt-1 uppercase text-base-content/60">{exam.level}</div></td>
                                     <td class="text-xs text-base-content/65"><div>{exam.start_date ? date.format(new Date(exam.start_date.slice(0, 10) + "T00:00:00")) : "—"}</div><div class="mt-1">to {exam.end_date ? date.format(new Date(exam.end_date.slice(0, 10) + "T00:00:00")) : "—"}</div></td>
-                                    <td><span class="badge badge-soft badge-sm capitalize" class:badge-success={exam.status === "active"} class:badge-warning={exam.status === "pending"} class:badge-neutral={exam.status === "completed"}>{exam.status}</span></td>
+                                    <td><span class="badge badge-soft badge-sm capitalize" class:badge-success={exam.status === "active"} class:badge-warning={exam.status === "pending"} class:badge-neutral={exam.status === "completed"}>{exam.status === "active" ? "Ongoing" : exam.status}</span></td>
                                     <td class="pr-6"><div class="flex justify-end gap-1"><Link href={`/dashboard/exam/${exam.uuid}/view`} class="btn btn-ghost btn-sm gap-1.5" aria-label={`Open papers for ${exam.title}`}><Eye size={15} /> Papers</Link><button onclick={() => openEditExam(exam)} class="btn btn-ghost btn-sm gap-1.5" aria-label={`Edit ${exam.title}`}><Pen size={14} /> Edit</button><button class="btn btn-square btn-ghost btn-sm text-base-content/55 hover:text-error" aria-label={`Delete ${exam.title}`} onclick={() => confirmDelete(exam)}><Trash2 size={15} /></button></div></td>
                                 </tr>
                             {/each}

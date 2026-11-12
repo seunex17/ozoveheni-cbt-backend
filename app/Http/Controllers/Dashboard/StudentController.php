@@ -15,6 +15,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\Level;
 use App\Models\Student;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -73,7 +74,7 @@ class StudentController extends Controller
             'students' => $students->paginate(20)->withQueryString(),
             'departments' => fn () => Department::orderBy('name')->get(['id', 'uuid', 'name']),
             'sets' => fn () => Student::query()->select('set')->distinct()->orderByDesc('set')->pluck('set')->filter()->values(),
-            'levels' => fn () => Student::query()->select('level')->distinct()->pluck('level')->filter()->map(fn (string $level): string => Str::lower($level))->unique()->sort()->values(),
+            'levels' => fn () => Level::orderBy('id')->pluck('code'),
             'filters' => $filters,
             'totalStudents' => Student::count(),
         ]);
@@ -100,6 +101,7 @@ class StudentController extends Controller
             'department' => $department,
             'set' => $set,
             'level' => $level,
+            'levels' => Level::orderBy('id')->pluck('code'),
         ]);
     }
 
@@ -111,13 +113,14 @@ class StudentController extends Controller
             'first_name' => 'required',
             'last_name' => 'required',
             'gender' => 'required',
+            'level' => ['required', 'string', 'exists:levels,code'],
             'reg_no' => 'required|unique:students,reg_no',
             'photo' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
         ]);
 
         if ($validate->fails()) {
             return back()
-                ->with('errors', $validate->errors()->first());
+                ->withErrors($validate)->withInput();
         }
 
         if ($request->hasFile('photo')) {
@@ -141,6 +144,7 @@ class StudentController extends Controller
         return Inertia::render('Student/Edit', [
             'student' => $student,
             'departments' => $departments,
+            'levels' => Level::orderBy('id')->pluck('code'),
         ]);
     }
 
@@ -152,12 +156,13 @@ class StudentController extends Controller
             'first_name' => 'required',
             'last_name' => 'required',
             'gender' => 'required',
+            'level' => ['required', 'string', 'exists:levels,code'],
             'photo' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
         ]);
 
         if ($validate->fails()) {
             return back()
-                ->with('errors', $validate->errors()->first());
+                ->withErrors($validate)->withInput();
         }
 
         $student = Student::where('uuid', $input['uuid'])->firstOrFail();

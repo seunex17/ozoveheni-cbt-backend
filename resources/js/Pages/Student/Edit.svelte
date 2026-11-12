@@ -3,7 +3,7 @@
     import DashboardLayout from "../../Components/Layouts/DashboardLayout.svelte";
     import { Form } from "@inertiajs/svelte";
 
-    let { student, departments } = $props();
+    let { student, departments, levels, errors = {} } = $props();
 
     let preview = $derived("/storage/" + student.photo);
 
@@ -155,6 +155,7 @@
                                 {/each}
                             </select>
                         </fieldset>
+                        <div><label for="student-level" class="mb-2 block text-sm font-medium">Level</label><select id="student-level" class="select w-full" name="level" required><option value="">Choose level</option>{#each levels as item}<option value={item} selected={item === student.level?.toLowerCase()}>{item.toUpperCase()}</option>{/each}</select>{#if errors.level}<p class="mt-2 text-sm text-error" role="alert">{errors.level}</p>{/if}</div>
                         <fieldset class="fieldset">
                             <legend class="fieldset-legend">Gender</legend>
                             <select class="select" name="gender">

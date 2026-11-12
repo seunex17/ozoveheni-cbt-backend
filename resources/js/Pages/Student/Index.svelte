@@ -28,7 +28,7 @@
     });
     const hasFilters = $derived(Boolean(filters.search || filters.department || filters.set || filters.level || filters.sort !== "name"));
     const selectedDepartment = $derived(departments.find((item) => item.uuid === filters.department));
-    const registrationLevels = $derived([...new Set(["nd", "hnd", ...levels])]);
+    const registrationLevels = $derived(levels);
     const currentYear = new Date().getFullYear();
     const registrationSets = $derived([...new Set([...sets, ...Array.from({ length: Math.max(1, currentYear - 2024 + 2) }, (_, index) => `${2024 + index}/${2025 + index}`)])].sort().reverse());
     const number = new Intl.NumberFormat("en-GB");

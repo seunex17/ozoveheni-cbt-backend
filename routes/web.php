@@ -96,6 +96,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
         Route::post('/edit', [ExamController::class, 'editPost'])->name('exam.editPost');
         Route::post('/set-new-exam', [ExamController::class, 'setNewExamPost'])->name('exam.setNewExamPost');
         Route::post('/add-question', [ExamController::class, 'addQuestionPost'])->name('exam.addQuestionPost');
+        Route::post('/{uuid}/add-question', [ExamController::class, 'addQuestionPost'])->name('exam.addQuestionForPaper');
         Route::post('/delete-question', [ExamController::class, 'deleteQuestionPost'])->name('exam.deleteQuestionPost');
         Route::post('/delete-exam', [ExamController::class, 'deleteExamPost'])->name('exam.deleteExamPost');
         Route::post('/refresh-reports', [ExamController::class, 'refreshReports'])->name('exam.refreshReports');

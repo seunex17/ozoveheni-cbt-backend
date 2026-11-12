@@ -17,6 +17,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Department;
 use App\Models\Exam;
+use App\Models\Level;
 use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\Report;
@@ -25,9 +26,11 @@ use App\Models\Student;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Rap2hpoutre\FastExcel\FastExcel;
 
@@ -75,7 +78,7 @@ class ExamController extends Controller
             'filters' => $filters, 'totalExams' => Exam::count(),
             'departments' => fn () => Department::orderBy('name')->get(['id', 'uuid', 'name']),
             'sets' => fn () => Exam::query()->select('set')->distinct()->orderByDesc('set')->pluck('set')->filter()->values(),
-            'levels' => fn () => Exam::query()->select('level')->distinct()->pluck('level')->filter()->map(fn (string $level): string => Str::lower($level))->unique()->sort()->values(),
+            'levels' => fn () => Level::orderBy('id')->pluck('code'),
         ]);
     }
 
@@ -85,6 +88,7 @@ class ExamController extends Controller
 
         return Inertia::render('Dashboard/Exams/Add', [
             'departments' => $departments,
+            'levels' => Level::orderBy('id')->pluck('code'),
         ]);
     }
 
@@ -97,7 +101,7 @@ class ExamController extends Controller
             'set' => ['required', 'string', 'max:30'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after:start_date'],
-            'level' => ['required', 'string', 'max:20'],
+            'level' => ['required', 'string', 'exists:levels,code'],
         ]);
         Exam::create([...$input, 'uuid' => Str::uuid()]);
 
@@ -112,6 +116,7 @@ class ExamController extends Controller
         return Inertia::render('Dashboard/Exams/Edit', [
             'exam' => $exam,
             'departments' => $departments,
+            'levels' => Level::orderBy('id')->pluck('code'),
         ]);
     }
 
@@ -125,7 +130,7 @@ class ExamController extends Controller
             'set' => ['required', 'string', 'max:30'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after:start_date'],
-            'level' => ['sometimes', 'required', 'string', 'max:20'],
+            'level' => ['required', 'string', 'exists:levels,code'],
         ]);
         $exam = Exam::findOrFail($input['id']);
         unset($input['id']);
@@ -225,9 +230,9 @@ class ExamController extends Controller
         ]);
     }
 
-    public function addQuestion(string $uuid)
+    public function addQuestion(string $uuid): \Inertia\Response
     {
-        $singleExam = SingleExam::where('uuid', $uuid)->firstOrFail()
+        $singleExam = SingleExam::where('uuid', $uuid)
             ->with(['exam', 'course'])
             ->firstOrFail();
 
@@ -236,9 +241,10 @@ class ExamController extends Controller
         ]);
     }
 
-    public function addQuestionPost(Request $request)
+    public function addQuestionPost(Request $request, ?string $uuid = null): \Illuminate\Http\RedirectResponse
     {
-        $validate = Validator::make($request->all(), [
+        $input = $request->validate([
+            'single_exam_id' => ['required', 'integer', 'exists:single_exams,id'],
             'question_text' => 'required|string',
             'points' => 'required|integer',
             'options' => 'required|array|min:2',
@@ -246,22 +252,22 @@ class ExamController extends Controller
             'options.*.is_correct' => 'required|boolean',
         ]);
 
-        if ($validate->fails()) {
-            return back()
-                ->with('error', $validate->errors()->first());
+        $singleExam = $uuid === null
+            ? SingleExam::findOrFail($input['single_exam_id'])
+            : SingleExam::where('uuid', $uuid)->firstOrFail();
+        if ((int) $input['single_exam_id'] !== $singleExam->id) {
+            throw ValidationException::withMessages(['single_exam_id' => 'The selected paper has changed. Reopen the question editor from the correct course paper.']);
         }
 
-        $input = $request->input();
+        DB::transaction(function () use ($input, $singleExam): void {
+            $question = $singleExam->questions()->create([
+                'question_text' => $input['question_text'],
+                'marks' => $input['points'],
+            ]);
+            $question->options()->createMany($input['options']);
+        });
 
-        $question = Question::create([
-            'question_text' => $input['question_text'],
-            'marks' => $input['points'],
-            'single_exam_id' => $input['single_exam_id'],
-        ]);
-
-        $question->options()->createMany($input['options']);
-
-        return back()
+        return to_route('exam.addQuestion', $singleExam->uuid)
             ->with('success', 'Question created successfully.');
     }
 

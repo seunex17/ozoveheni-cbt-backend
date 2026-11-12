@@ -17,14 +17,14 @@ function directoryExam(Department $department, array $input = []): Exam
 {
     return Exam::forceCreate([
         'uuid' => (string) str()->uuid(), 'department_id' => $department->id, 'title' => 'First semester exam',
-        'subtitle' => '2026/2027', 'set' => '2025/2026', 'level' => 'nd1', 'status' => 'pending',
+        'subtitle' => '2026/2027', 'set' => '2025/2026', 'level' => 'nd', 'status' => 'pending',
         'start_date' => '2026-11-10', 'end_date' => '2026-11-20', ...$input,
     ]);
 }
 
 function examDirectoryInput(Department $department): array
 {
-    return ['department_id' => $department->id, 'title' => 'New examination', 'subtitle' => '2026/2027', 'set' => '2025/2026', 'level' => 'nd1', 'start_date' => '2026-11-10', 'end_date' => '2026-11-20'];
+    return ['department_id' => $department->id, 'title' => 'New examination', 'subtitle' => '2026/2027', 'set' => '2025/2026', 'level' => 'nd', 'start_date' => '2026-11-10', 'end_date' => '2026-11-20'];
 }
 
 test('exam directory requires active administrator access', function () {
@@ -45,20 +45,20 @@ test('exam directory paginates with department names and filter options', functi
     }
     $this->actingAs($admin)->get('/dashboard/exam')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
         ->component('Dashboard/Exams/Index')->has('exams.data', 20)->where('exams.total', 24)->where('totalExams', 24)
-        ->where('exams.data.0.department.name', 'Community Health')->where('sets.0', '2025/2026')->where('levels.0', 'nd1')->has('departments', 1));
+        ->where('exams.data.0.department.name', 'Community Health')->where('sets.0', '2025/2026')->where('levels.0', 'nd')->has('departments', 1));
 });
 
 test('exam filters compose without leaking other departments sets levels or statuses', function () {
     $admin = User::factory()->create(['is_admin' => true, 'status' => 'active']);
     $department = examDirectoryDepartment();
     $other = examDirectoryDepartment('Other Department');
-    $match = directoryExam($department, ['level' => 'ND1']);
+    $match = directoryExam($department, ['level' => 'ND']);
     directoryExam($other);
-    directoryExam($department, ['level' => 'nd2']);
+    directoryExam($department, ['level' => 'hnd']);
     directoryExam($department, ['set' => '2024/2025']);
     directoryExam($department, ['status' => 'active']);
     directoryExam($department, ['title' => 'Second semester']);
-    $query = http_build_query(['search' => 'FIRST', 'department' => $department->uuid, 'set' => '2025/2026', 'level' => 'nd1', 'status' => 'pending']);
+    $query = http_build_query(['search' => 'FIRST', 'department' => $department->uuid, 'set' => '2025/2026', 'level' => 'nd', 'status' => 'pending']);
     $this->actingAs($admin)->get('/dashboard/exam?'.$query)->assertInertia(fn (AssertableInertia $page) => $page
         ->has('exams.data', 1)->where('exams.data.0.id', $match->id)->where('totalExams', 6));
     $this->get('/dashboard/exam?search=2026%2F2027')->assertInertia(fn (AssertableInertia $page) => $page->where('exams.total', 6));
@@ -94,7 +94,7 @@ test('creating an exam refreshes the list with the new group first', function ()
     directoryExam($department, ['created_at' => now()->subDay()]);
     $response = $this->actingAs($admin)->from('/dashboard/exam?search=Missing&page=3')->post('/dashboard/exam/add', [...examDirectoryInput($department), 'status' => 'completed', 'uuid' => 'untrusted'])
         ->assertRedirectToRoute('exam');
-    $this->assertDatabaseHas('exams', ['title' => 'New examination', 'status' => 'pending', 'level' => 'nd1']);
+    $this->assertDatabaseHas('exams', ['title' => 'New examination', 'status' => 'pending', 'level' => 'nd']);
     $this->assertDatabaseMissing('exams', ['uuid' => 'untrusted']);
     $this->get($response->headers->get('Location'))->assertInertia(fn (AssertableInertia $page) => $page->where('exams.data.0.title', 'New examination')->where('exams.current_page', 1)->where('filters.search', ''));
 });
@@ -114,9 +114,9 @@ test('exam edits update group details without changing lifecycle status or uuid'
     $admin = User::factory()->create(['is_admin' => true, 'status' => 'active']);
     $department = examDirectoryDepartment();
     $exam = directoryExam($department, ['status' => 'active']);
-    $this->actingAs($admin)->post('/dashboard/exam/edit', ['id' => $exam->id, ...examDirectoryInput($department), 'level' => 'nd2', 'uuid' => 'untrusted', 'status' => 'completed'])
+    $this->actingAs($admin)->post('/dashboard/exam/edit', ['id' => $exam->id, ...examDirectoryInput($department), 'level' => 'hnd', 'uuid' => 'untrusted', 'status' => 'completed'])
         ->assertRedirectToRoute('exam', ['search' => 'New examination']);
-    $this->assertDatabaseHas('exams', ['id' => $exam->id, 'title' => 'New examination', 'level' => 'nd2', 'status' => 'active', 'uuid' => $exam->uuid]);
+    $this->assertDatabaseHas('exams', ['id' => $exam->id, 'title' => 'New examination', 'level' => 'hnd', 'status' => 'active', 'uuid' => $exam->uuid]);
     $this->post('/dashboard/exam/edit', ['id' => $exam->id, ...examDirectoryInput($department), 'end_date' => '2026-11-09'])->assertSessionHasErrors('end_date');
     expect($exam->fresh()->end_date->toDateString())->toBe('2026-11-20');
 });

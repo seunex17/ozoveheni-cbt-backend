@@ -38,6 +38,7 @@ class SingleExam extends Model
         return $this->belongsTo(Course::class);
     }
 
+    /** @return HasMany<Question, $this> */
     public function questions(): HasMany
     {
         return $this->hasMany(Question::class);

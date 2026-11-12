@@ -43,7 +43,7 @@
     const submit = (event: SubmitEvent) => {
         event.preventDefault();
         if ($form.processing) return;
-        $form.post("/dashboard/exam/add-question", {
+        $form.post(`/dashboard/exam/${singleExam.uuid}/add-question`, {
             onSuccess: (page) => {
                 if ((page.props.flash as any)?.error) return;
                 $form.reset();
@@ -59,7 +59,7 @@
 
 <DashboardLayout
     title="Add question"
-    description={`${singleExam.course.code} · ${singleExam.course.name}`}
+    description={`${singleExam.course.code} · ${singleExam.course.name} · ${singleExam.exam.title}`}
 >
     {#snippet actions()}<Link href={`/dashboard/exam/${singleExam.uuid}/single-exam`} class="btn btn-ghost btn-sm">Back to question bank</Link>{/snippet}
     <div class="grid items-start gap-6 xl:grid-cols-2">

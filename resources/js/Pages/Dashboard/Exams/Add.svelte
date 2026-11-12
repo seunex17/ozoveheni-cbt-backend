@@ -2,7 +2,7 @@
     import { Form } from "@inertiajs/svelte";
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
 
-    let { departments, errors = {} } = $props();
+    let { departments, levels, errors = {} } = $props();
 
     const startYear = 2024;
     const currentYear = new Date().getFullYear();
@@ -79,10 +79,7 @@
                             <option value="" disabled selected
                                 >Pick a level</option
                             >
-                            <option value="nd1">ND1</option>
-                            <option value="nd2">ND2</option>
-                            <option value="hnd1">HND1</option>
-                            <option value="hnd2">HND2</option>
+                            {#each levels as item}<option value={item}>{item.toUpperCase()}</option>{/each}
                         </select>
                     </fieldset>
                     <div class="sm:col-span-2 w-full flex justify-center">

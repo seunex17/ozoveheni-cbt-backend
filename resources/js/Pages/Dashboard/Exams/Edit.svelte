@@ -2,7 +2,7 @@
     import { Form } from "@inertiajs/svelte";
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
 
-    let { departments, exam, errors = {} } = $props();
+    let { departments, exam, levels, errors = {} } = $props();
 </script>
 
 <DashboardLayout title="Edit: {exam.title}">
@@ -76,6 +76,7 @@
                             value={exam.end_date?.slice(0, 10)}
                         />
                     </fieldset>
+                    <div><label for="edit-exam-level" class="mb-2 block text-sm font-medium">Level</label><select id="edit-exam-level" name="level" class="select w-full" required>{#each levels as item}<option value={item} selected={item === exam.level?.toLowerCase()}>{item.toUpperCase()}</option>{/each}</select></div>
                     <div class="sm:col-span-2 w-full flex justify-center">
                         <div class="max-w-sm w-full">
                             <button class="btn btn-block btn-primary"
