@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\App\ExamHallProgressController;
 use App\Http\Controllers\App\ExaminationController;
+use App\Http\Controllers\App\PracticeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/load-questions/{department}/{set}/{attempt}', [ExaminationController::class, 'loadQuestions'])->name('exam.loadQuestions');
@@ -17,3 +18,11 @@ Route::get('/test', function () {
 });
 
 Route::post('/exam-hall/heartbeat', [ExamHallProgressController::class, 'store'])->name('exam.hallHeartbeat');
+
+Route::prefix('practice')->group(function () {
+    Route::post('/login', [PracticeController::class, 'login'])->middleware('throttle:60,1')->name('practice.login');
+    Route::get('/sessions', [PracticeController::class, 'sessions'])->name('practice.sessions');
+    Route::get('/exams', [PracticeController::class, 'exams'])->name('practice.exams');
+    Route::get('/exams/{exam}/courses', [PracticeController::class, 'courses'])->name('practice.courses');
+    Route::get('/papers/{paper}/questions', [PracticeController::class, 'questions'])->name('practice.questions');
+});
