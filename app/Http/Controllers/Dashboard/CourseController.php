@@ -91,7 +91,7 @@ class CourseController extends Controller
 
     public function delete(Request $request)
     {
-        Course::where('id', $request->id)->delete();
+        Course::findOrFail($request->id)->delete();
 
         return back()
             ->with('success', 'Course deleted successfully.');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attempt;
 use App\Models\Exam;
 use App\Models\Student;
+use App\Services\AuditTrail;
 use App\Services\ExamHallMonitor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +62,10 @@ class AttemptController extends Controller
             $query = $this->attempts($exam)->where('student_id', $student->id);
             abort_unless((clone $query)->exists(), 404);
             $count = $query->delete();
+            app(AuditTrail::class)->record($exam, 'exam', 'attempts_cleared', metadata: [
+                'scope' => 'student', 'student_id' => $student->id, 'student' => $student->reg_no.' · '.$student->first_name.' '.$student->last_name,
+                'attempts_removed' => $count, 'stored_results_preserved' => true,
+            ]);
             $monitor->publish('reset');
 
             return $count;
@@ -77,6 +82,11 @@ class AttemptController extends Controller
             Student::whereHas('attempts', fn (Builder $query) => $query->whereHas('singleExam', fn (Builder $paper) => $paper->where('exam_id', $exam->id)))
                 ->orderBy('id')->lockForUpdate()->get(['id']);
             $count = $this->attempts($exam)->delete();
+            if ($count > 0) {
+                app(AuditTrail::class)->record($exam, 'exam', 'attempts_cleared', metadata: [
+                    'scope' => 'exam', 'attempts_removed' => $count, 'stored_results_preserved' => true,
+                ]);
+            }
             $monitor->publish('reset');
 
             return $count;

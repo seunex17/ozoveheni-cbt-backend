@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Observers\AuditObserver;
+use App\Services\AuditTrail;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +13,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(AuditTrail::class);
     }
 
     /**
@@ -19,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        foreach (array_keys(AuditObserver::MODELS) as $model) {
+            $model::observe(AuditObserver::class);
+        }
     }
 }

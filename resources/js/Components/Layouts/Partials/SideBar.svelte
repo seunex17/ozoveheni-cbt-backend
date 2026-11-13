@@ -1,11 +1,11 @@
 <script lang="ts">
     import { Link, page } from "@inertiajs/svelte";
-    import { BookA, Folder, GraduationCap, LayoutDashboard, Notebook, DoorOpen, Ticket, Printer, Users, ShieldCheck, RotateCcw } from "lucide-svelte";
+    import { BookA, Folder, GraduationCap, LayoutDashboard, Notebook, DoorOpen, Ticket, Printer, Users, ShieldCheck, RotateCcw, History } from "lucide-svelte";
 
     let { onNavigate = () => {} } = $props();
     const currentPath = $derived($page.url.split("?")[0]);
     const groups = [
-        { label: "Workspace", links: [{ name: "Overview", route: "/dashboard", icon: LayoutDashboard }] },
+        { label: "Workspace", links: [{ name: "Overview", route: "/dashboard", icon: LayoutDashboard }, { name: "Audit history", route: "/dashboard/audit-history", icon: History }] },
         { label: "Academic records", links: [
             { name: "Students", route: "/dashboard/student", icon: GraduationCap },
             { name: "Departments", route: "/dashboard/department", icon: Folder },
