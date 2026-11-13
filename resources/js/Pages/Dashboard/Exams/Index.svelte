@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Link, router, useForm } from "@inertiajs/svelte";
-    import { Plus, Pen, Eye, Trash2, Search, X, ClipboardList, ArrowLeft, ArrowRight, SlidersHorizontal } from "lucide-svelte";
+    import { Plus, Pen, Eye, Trash2, Search, X, ClipboardList, ArrowLeft, ArrowRight, SlidersHorizontal, ClipboardCheck } from "lucide-svelte";
     import DashboardLayout from "../../../Components/Layouts/DashboardLayout.svelte";
 
     let { exams, filters, totalExams, departments, sets = [], levels = [] } = $props();
@@ -138,7 +138,7 @@
                                     <td class="text-xs"><div>{exam.set}</div><div class="mt-1 uppercase text-base-content/60">{exam.level}</div></td>
                                     <td class="text-xs text-base-content/65"><div>{exam.start_date ? date.format(new Date(exam.start_date.slice(0, 10) + "T00:00:00")) : "—"}</div><div class="mt-1">to {exam.end_date ? date.format(new Date(exam.end_date.slice(0, 10) + "T00:00:00")) : "—"}</div></td>
                                     <td><span class="badge badge-soft badge-sm capitalize" class:badge-success={exam.status === "active"} class:badge-warning={exam.status === "pending"} class:badge-neutral={exam.status === "completed"}>{exam.status === "active" ? "Ongoing" : exam.status}</span></td>
-                                    <td class="pr-6"><div class="flex justify-end gap-1"><Link href={`/dashboard/exam/${exam.uuid}/view`} class="btn btn-ghost btn-sm gap-1.5" aria-label={`Open papers for ${exam.title}`}><Eye size={15} /> Papers</Link><button onclick={() => openEditExam(exam)} class="btn btn-ghost btn-sm gap-1.5" aria-label={`Edit ${exam.title}`}><Pen size={14} /> Edit</button><button class="btn btn-square btn-ghost btn-sm text-base-content/55 hover:text-error" aria-label={`Delete ${exam.title}`} onclick={() => confirmDelete(exam)}><Trash2 size={15} /></button></div></td>
+                                    <td class="pr-6"><div class="flex justify-end gap-1"><Link href={`/dashboard/exam/${exam.uuid}/readiness`} class="btn btn-ghost btn-sm gap-1.5" aria-label={`Check readiness for ${exam.title}`}><ClipboardCheck size={15} /> Readiness</Link><Link href={`/dashboard/exam/${exam.uuid}/view`} class="btn btn-ghost btn-sm gap-1.5" aria-label={`Open papers for ${exam.title}`}><Eye size={15} /> Papers</Link><button onclick={() => openEditExam(exam)} class="btn btn-ghost btn-sm gap-1.5" aria-label={`Edit ${exam.title}`}><Pen size={14} /> Edit</button><button class="btn btn-square btn-ghost btn-sm text-base-content/55 hover:text-error" aria-label={`Delete ${exam.title}`} onclick={() => confirmDelete(exam)}><Trash2 size={15} /></button></div></td>
                                 </tr>
                             {/each}
                         </tbody>

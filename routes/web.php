@@ -7,6 +7,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\ExamController;
 use App\Http\Controllers\Dashboard\ExamHallController;
+use App\Http\Controllers\Dashboard\ExamReadinessController;
 use App\Http\Controllers\Dashboard\ExamVoucherController;
 use App\Http\Controllers\Dashboard\PrintController;
 use App\Http\Controllers\Dashboard\StaffController;
@@ -83,6 +84,7 @@ Route::prefix('/dashboard')->middleware(['auth:web', AccountActiveMiddleware::cl
     Route::prefix('/exam')->middleware([IsAdminMiddleware::class])->group(function () {
         Route::get('/', [ExamController::class, 'index'])->name('exam');
         Route::get('/add', [ExamController::class, 'add'])->name('exam.add');
+        Route::get('/{uuid}/readiness', ExamReadinessController::class)->name('exam.readiness');
         Route::get('/{uuid}/edit', [ExamController::class, 'edit'])->name('exam.edit');
         Route::get('{uuid}/view', [ExamController::class, 'view'])->name('exam.view');
         Route::get('/{uuid}/set-new-exam', [ExamController::class, 'setNewExam'])->name('exam.setNewExam');

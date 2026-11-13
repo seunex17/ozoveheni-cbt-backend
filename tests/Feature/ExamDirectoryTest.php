@@ -125,3 +125,19 @@ test('exam directory rejects invalid query inputs', function (array $input, stri
     $admin = User::factory()->create(['is_admin' => true, 'status' => 'active']);
     $this->actingAs($admin)->getJson('/dashboard/exam?'.http_build_query($input))->assertUnprocessable()->assertJsonValidationErrors($field);
 })->with([[['department' => 'invalid'], 'department'], [['status' => 'invalid'], 'status'], [['sort' => 'invalid'], 'sort'], [['search' => ['invalid']], 'search'], [['search' => str_repeat('a', 101)], 'search']]);
+
+test('exam calendar dates retain their saved day in the directory and edit form without a UTC shift', function () {
+    $department = examDirectoryDepartment();
+    $exam = directoryExam($department, ['start_date' => '2026-11-12', 'end_date' => '2026-11-13', 'status' => 'active']);
+    $this->actingAs(User::factory()->create(['is_admin' => true, 'status' => 'active']));
+    $this->get('/dashboard/exam')->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('exams.data.0.start_date', '2026-11-12')->where('exams.data.0.end_date', '2026-11-13'));
+    $this->get('/dashboard/exam/'.$exam->uuid.'/edit')->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('exam.start_date', '2026-11-12')->where('exam.end_date', '2026-11-13'));
+    $this->travelTo(new DateTimeImmutable('2026-11-13 12:00:00 Africa/Lagos'));
+    $this->artisan('exams:update-statuses')->assertSuccessful();
+    expect($exam->fresh()->status)->toBe('active');
+    $this->travelTo(new DateTimeImmutable('2026-11-14 00:00:00 Africa/Lagos'));
+    $this->artisan('exams:update-statuses')->assertSuccessful();
+    expect($exam->fresh()->status)->toBe('completed');
+});
