@@ -1,7 +1,11 @@
 import "./bootstrap";
+import { initializePwa } from "./States/pwa.svelte";
+
 import { createInertiaApp } from "@inertiajs/svelte";
 import { mount } from "svelte";
 import MainLayout from "./MainLayout.svelte";
+
+initializePwa();
 
 createInertiaApp({
     resolve: (name) => {

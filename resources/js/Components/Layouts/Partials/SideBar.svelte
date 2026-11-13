@@ -1,4 +1,5 @@
 <script lang="ts">
+    import PwaInstallButton from "../../PwaInstallButton.svelte";
     import { Link, page } from "@inertiajs/svelte";
     import { BookA, Folder, GraduationCap, LayoutDashboard, Notebook, DoorOpen, Ticket, Printer, Users, ShieldCheck, RotateCcw, History } from "lucide-svelte";
 
@@ -47,6 +48,7 @@
             </div>
         {/each}
     </nav>
+    <div class="mx-5 mb-3"><PwaInstallButton /></div>
     <div class="mx-5 mb-5 rounded-xl border border-neutral-content/10 p-4">
         <ShieldCheck size={20} class="mb-3 text-neutral-content/60" />
         <p class="text-xs font-medium">Staff workspace</p>
